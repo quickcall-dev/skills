@@ -1,0 +1,8 @@
+{
+  "worker_id": "builder",
+  "status": "RUNNING",
+  "task": "Write a Python fizzbuzz with edge case handling",
+  "step": "launched",
+  "last_updated": "2026-04-16T12:18:13Z",
+  "cost_usd": 0
+}

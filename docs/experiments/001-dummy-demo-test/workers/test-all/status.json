@@ -1,0 +1,11 @@
+{
+  "worker_id": "test-all",
+  "status": "RUNNING",
+  "task": "Write pytest tests for hello.py and utils.py",
+  "step": "launched",
+  "last_updated": "2026-04-16T12:12:03Z",
+  "session_id": null,
+  "cost_usd": 0,
+  "turns_used": 0,
+  "restarts": 0
+}

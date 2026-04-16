@@ -1,0 +1,29 @@
+{
+  "fleet_name": "autoresearch-demo",
+  "type": "autoresearch",
+  "config": {
+    "model": "haiku",
+    "fallback_model": "sonnet",
+    "provider": "claude",
+    "budget_per_iter": 0.25,
+    "max_turns": 0
+  },
+  "problem": {
+    "workdir": "/home/sagar/skills/docs/experiments/001-dummy-demo-test/autoresearch-fleet/workdir",
+    "eval_command": "python3 eval.py",
+    "metric_regex": "^score:\\s*([0-9.]+)",
+    "metric_direction": "maximize",
+    "results_file": "results.tsv",
+    "program_md": "program.md"
+  },
+  "stop_when": {
+    "max_iterations": 5,
+    "cost_cap_usd": 2
+  },
+  "search": {
+    "enabled": false,
+    "plateau_threshold": 3
+  },
+  "status": "running",
+  "launched_at": "2026-04-16T12:18:16Z"
+}

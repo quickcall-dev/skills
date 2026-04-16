@@ -1,0 +1,34 @@
+{
+  "fleet_name": "worktree-demo",
+  "type": "worktree",
+  "config": {
+    "max_concurrent": 2,
+    "model": "haiku",
+    "fallback_model": "haiku",
+    "provider": "claude"
+  },
+  "workers": [
+    {
+      "id": "add-readme",
+      "task": "Create README.md for minitools Python library",
+      "target_files": [
+        "README.md"
+      ],
+      "branch": "add-readme",
+      "type": "code-run",
+      "max_budget_usd": 0.25
+    },
+    {
+      "id": "add-license",
+      "task": "Create MIT LICENSE file",
+      "target_files": [
+        "LICENSE"
+      ],
+      "branch": "add-license",
+      "type": "code-run",
+      "max_budget_usd": 0.25
+    }
+  ],
+  "status": "running",
+  "launched_at": "2026-04-16T12:15:11Z"
+}

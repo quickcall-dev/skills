@@ -1,0 +1,11 @@
+{
+  "worker_id": "hello",
+  "status": "RUNNING",
+  "task": "Create hello.py with greet() function",
+  "step": "launched",
+  "last_updated": "2026-04-16T12:11:45Z",
+  "session_id": null,
+  "cost_usd": 0,
+  "turns_used": 0,
+  "restarts": 0
+}

@@ -1,0 +1,8 @@
+{
+  "worker_id": "add-license",
+  "branch": "add-license",
+  "worktree": "/home/sagar/skills/docs/experiments/001-dummy-demo-test/worktree-fleet/worktrees/add-license",
+  "status": "RUNNING",
+  "task": "Create MIT LICENSE file",
+  "last_updated": "2026-04-16T12:15:11Z"
+}
