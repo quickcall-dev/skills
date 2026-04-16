@@ -5,3 +5,4 @@ a03f049	101.79	keep	update: use set for vowel lookup O(1)
 discard	56.36	discard	str.translate() broken logic
 7e4f09a	101.82	keep	update: sum individual vowel counts
 discard	101.8	discard	frozenset worse than sum().count()
+discard	101.76	discard	set lookup slower than count() 10x
