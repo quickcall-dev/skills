@@ -1,0 +1,14 @@
+{
+  "fleet_name": "fleet-test-cycle-codex",
+  "config": {
+    "max_concurrent": 2,
+    "provider": "codex",
+    "model": "gpt-5.4-mini",
+    "fallback_model": "haiku",
+    "launch_delay_seconds": 1
+  },
+  "workers": [
+    { "id": "a", "type": "code-run", "task": "a", "max_budget_usd": 0.05, "depends_on": ["b"] },
+    { "id": "b", "type": "code-run", "task": "b", "max_budget_usd": 0.05, "depends_on": ["a"] }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "fleet_name": "test-worktree-independent-codex",
+  "type": "worktree",
+  "config": {
+    "max_concurrent": 3,
+    "provider": "codex",
+    "model": "gpt-5.4-mini",
+    "reasoning_effort": "medium",
+    "fallback_model": "haiku"
+  },
+  "workers": [
+    {
+      "id": "rename-foo",
+      "task": "Rename foo to baz in src/utils/foo.ts",
+      "target_files": ["src/utils/foo.ts", "src/utils/foo.test.ts"],
+      "branch": "codex-rename-foo",
+      "type": "code-run",
+      "max_budget_usd": 2.0
+    },
+    {
+      "id": "add-bar",
+      "task": "Add bar module at src/lib/bar.ts",
+      "target_files": ["src/lib/bar.ts", "src/lib/bar.test.ts"],
+      "branch": "codex-add-bar",
+      "type": "code-run",
+      "max_budget_usd": 2.0
+    },
+    {
+      "id": "fix-docs",
+      "task": "Fix typos in README.md",
+      "target_files": ["README.md"],
+      "branch": "codex-fix-docs",
+      "type": "code-run",
+      "max_budget_usd": 1.0
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Fake `codex` shim for fleet-orchestrator fixture tests (codex provider).
+#
+# Mimics `codex exec - --json ...` just well enough for
+# launch.sh/status.sh to be exercised end-to-end without burning real API calls.
+#
+# Protocol:
+#   - Parses -m/--model, --sandbox, -C, -c flags
+#   - Uses $WORKER_ID (exported by launch.sh INNER_CMD) to locate the per-worker
+#     bash command at $FLEET_ROOT/.fake-tasks/$WORKER_ID.sh
+#   - Emits codex-format JSONL events:
+#       {"type":"thread.started","thread_id":"..."}
+#       {"type":"turn.started"}
+#       {"type":"item.completed","item":{"id":"...","type":"agent_message","text":"..."}}
+#       {"type":"turn.completed","usage":{"input_tokens":N,"output_tokens":N,"cached_input_tokens":N}}
+#     or on failure:
+#       {"type":"turn.failed","error":{"message":"..."}}
+#
+# The real codex CLI writes many events; we write the minimum that status.sh
+# and the fleet infrastructure look for.
+
+set -u
+
+MODEL="fake-gpt-5.4-mini"
+SANDBOX="workspace-write"
+SUBCOMMAND=""
+
+# Parse args — codex exec - -m MODEL --json --sandbox MODE ...
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    exec) SUBCOMMAND="exec"; shift ;;
+    -m|--model) MODEL="$2"; shift 2 ;;
+    --sandbox) SANDBOX="$2"; shift 2 ;;
+    --json|--ephemeral|--skip-git-repo-check) shift ;;
+    -C) shift 2 ;;
+    -c) shift 2 ;;  # config overrides like web_search, reasoning_effort
+    -) shift ;;     # stdin marker
+    *) shift ;;
+  esac
+done
+
+# Drain stdin (the prompt is piped in)
+cat >/dev/null 2>&1 || true
+
+THREAD_ID="fake-thread-$(date +%s)-$$"
+
+# thread.started
+printf '{"type":"thread.started","thread_id":"%s"}\n' "$THREAD_ID"
+
+# turn.started
+printf '{"type":"turn.started"}\n'
+
+# Initial agent message
+printf '{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"Starting task for worker %s"}}\n' \
+  "${WORKER_ID:-unknown}"
+
+# Run the per-worker fake task, if one exists.
+TASK_SCRIPT=""
+if [[ -n "${FLEET_ROOT:-}" && -n "${WORKER_ID:-}" ]]; then
+  TASK_SCRIPT="${FLEET_ROOT}/.fake-tasks/${WORKER_ID}.sh"
+fi
+
+RC=0
+if [[ -n "$TASK_SCRIPT" && -f "$TASK_SCRIPT" ]]; then
+  bash "$TASK_SCRIPT" || RC=$?
+else
+  sleep 2
+fi
+
+if [[ "$RC" -eq 0 ]]; then
+  # Final agent message
+  printf '{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Task complete for worker %s"}}\n' \
+    "${WORKER_ID:-unknown}"
+  # Terminal success: turn.completed with usage
+  printf '{"type":"turn.completed","usage":{"input_tokens":1000,"output_tokens":200,"cached_input_tokens":500}}\n'
+else
+  # Terminal failure: turn.failed
+  printf '{"type":"turn.failed","error":{"message":"task exited with rc=%d"}}\n' "$RC"
+fi
+
+exit 0

@@ -1,0 +1,37 @@
+{
+  "fleet_name": "test-iterative-multilayer",
+  "type": "iterative",
+  "config": {
+    "max_concurrent": 3,
+    "model": "haiku",
+    "fallback_model": "haiku",
+    "max_iterations": 3,
+    "cost_cap_usd": 1.0
+  },
+  "workers": [
+    {
+      "id": "researcher",
+      "type": "read-only",
+      "task": "Research the codebase",
+      "max_budget_per_iter": 0.10
+    },
+    {
+      "id": "builder",
+      "type": "code-run",
+      "task": "Build based on research",
+      "depends_on": ["researcher"],
+      "max_budget_per_iter": 0.10
+    },
+    {
+      "id": "reviewer",
+      "type": "reviewer",
+      "task": "Review the build output",
+      "depends_on": ["builder"],
+      "max_budget_per_iter": 0.10
+    }
+  ],
+  "stop_when": {
+    "reviewer_lgtm_count": 1,
+    "max_iterations": 3
+  }
+}

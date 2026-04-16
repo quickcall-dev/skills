@@ -1,0 +1,34 @@
+{
+  "fleet_name": "test-iterative-basic",
+  "type": "iterative",
+  "config": {
+    "max_concurrent": 3,
+    "model": "haiku",
+    "fallback_model": "haiku",
+    "max_iterations": 3,
+    "cost_cap_usd": 1.0
+  },
+  "workers": [
+    {
+      "id": "builder-a",
+      "type": "code-run",
+      "task": "Build component A",
+      "max_budget_per_iter": 0.10
+    },
+    {
+      "id": "builder-b",
+      "type": "code-run",
+      "task": "Build component B",
+      "max_budget_per_iter": 0.10
+    },
+    {
+      "id": "reviewer",
+      "type": "reviewer",
+      "task": "Review iteration output, write verdict"
+    }
+  ],
+  "stop_when": {
+    "reviewer_lgtm_count": 2,
+    "max_iterations": 3
+  }
+}

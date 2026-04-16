@@ -1,0 +1,21 @@
+{
+  "fleet_name": "fleet-test-dag-codex",
+  "fleet_id": "fleet-test-dag-codex",
+  "status": "pending",
+  "config": {
+    "max_concurrent": 4,
+    "provider": "codex",
+    "model": "gpt-5.4-mini",
+    "reasoning_effort": "medium",
+    "fallback_model": "haiku",
+    "launch_delay_seconds": 1
+  },
+  "workers": [
+    { "id": "a", "type": "code-run", "task": "a", "max_budget_usd": 0.05 },
+    { "id": "b", "type": "code-run", "task": "b", "max_budget_usd": 0.05 },
+    { "id": "c", "type": "code-run", "task": "c", "max_budget_usd": 0.05, "depends_on": ["a"] },
+    { "id": "d", "type": "code-run", "task": "d", "max_budget_usd": 0.05 },
+    { "id": "e", "type": "code-run", "task": "e", "max_budget_usd": 0.05 },
+    { "id": "f", "type": "code-run", "task": "f", "max_budget_usd": 0.05, "depends_on": ["a","b","c","d","e"] }
+  ]
+}

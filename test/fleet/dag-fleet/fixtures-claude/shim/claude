@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Fake `claude` shim for fleet-orchestrator fixture tests.
+#
+# Mimics `claude -p ... --output-format stream-json` just well enough for
+# launch.sh/orchestrate.sh/status.sh/verify.sh/report.sh to be exercised
+# end-to-end without burning real API calls.
+#
+# Protocol:
+#   - Parses --name to learn which worker session this is (fleet-<name>-<worker_id>)
+#   - Uses $WORKER_ID (exported by launch.sh INNER_CMD) to locate the per-worker
+#     bash command at $FLEET_ROOT/.fake-tasks/$WORKER_ID.sh
+#   - Emits an initial assistant stream-json event, runs the task, then emits a
+#     terminal result event with a stable cost value. Output goes to stdout so
+#     launch.sh's `| tee session.jsonl` captures it normally.
+#
+# The real claude CLI writes many events; we write the minimum that status.sh,
+# orchestrate.sh, verify.sh, report.sh, and count_active_workers all look at:
+#   {"type":"assistant", "message": {"model": "...", "usage": {...}}}
+#   {"type":"result", "subtype": "success", "total_cost_usd": N, "num_turns": N, "session_id": "..."}
+
+set -u
+
+MODEL="fake-haiku"
+NAME="fake-worker"
+TURNS=1
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --model) MODEL="$2"; shift 2 ;;
+    --name) NAME="$2"; shift 2 ;;
+    --max-turns) TURNS="$2"; shift 2 ;;
+    -p|--dangerously-skip-permissions|--verbose) shift ;;
+    --output-format|--fallback-model|--max-budget-usd|--disallowed-tools|--allowed-tools)
+      shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+# Drain stdin (the prompt is piped in)
+cat >/dev/null 2>&1 || true
+
+SESSION_ID="fake-$(date +%s)-$$"
+TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# Initial assistant event — status.sh's cost/liveness path reads this
+printf '{"type":"assistant","message":{"model":"%s","usage":{"input_tokens":100,"output_tokens":50}},"session_id":"%s","timestamp":"%s"}\n' \
+  "$MODEL" "$SESSION_ID" "$TS"
+
+# Run the per-worker fake task, if one exists.
+TASK_SCRIPT=""
+if [[ -n "${FLEET_ROOT:-}" && -n "${WORKER_ID:-}" ]]; then
+  TASK_SCRIPT="${FLEET_ROOT}/.fake-tasks/${WORKER_ID}.sh"
+fi
+
+RC=0
+if [[ -n "$TASK_SCRIPT" && -x "$TASK_SCRIPT" ]]; then
+  bash "$TASK_SCRIPT" || RC=$?
+elif [[ -n "$TASK_SCRIPT" && -f "$TASK_SCRIPT" ]]; then
+  bash "$TASK_SCRIPT" || RC=$?
+else
+  sleep 2
+fi
+
+TS2="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+SUBTYPE="success"
+[[ "$RC" -ne 0 ]] && SUBTYPE="error"
+
+# Terminal result event — this is what count_active_workers / orchestrator /
+# verify.sh / report.sh all key on.
+printf '{"type":"result","subtype":"%s","total_cost_usd":0.0123,"num_turns":%s,"session_id":"%s","timestamp":"%s"}\n' \
+  "$SUBTYPE" "$TURNS" "$SESSION_ID" "$TS2"
+
+exit 0

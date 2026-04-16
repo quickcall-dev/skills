@@ -1,0 +1,29 @@
+{
+  "fleet_name": "test-worktree-independent",
+  "type": "worktree",
+  "config": {
+    "max_concurrent": 3,
+    "model": "haiku",
+    "fallback_model": "haiku"
+  },
+  "workers": [
+    {
+      "id": "rename-foo",
+      "task": "Rename foo to baz in src/utils/foo.ts",
+      "target_files": ["src/utils/foo.ts", "src/utils/foo.test.ts"],
+      "branch": "rename-foo"
+    },
+    {
+      "id": "add-bar",
+      "task": "Add bar module at src/lib/bar.ts",
+      "target_files": ["src/lib/bar.ts", "src/lib/bar.test.ts"],
+      "branch": "add-bar"
+    },
+    {
+      "id": "fix-docs",
+      "task": "Fix typos in README.md",
+      "target_files": ["README.md"],
+      "branch": "fix-docs"
+    }
+  ]
+}

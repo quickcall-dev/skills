@@ -1,0 +1,16 @@
+{
+  "fleet_name": "fleet-test-cycle",
+  "fleet_id": "fleet-test-cycle",
+  "status": "pending",
+  "config": {
+    "max_concurrent": 2,
+    "model": "haiku",
+    "fallback_model": "haiku",
+    "launch_delay_seconds": 0,
+    "max_budget_fleet": 0
+  },
+  "workers": [
+    { "id": "a", "type": "code-run", "task": "a", "depends_on": ["b"], "max_turns": 2, "max_budget_usd": 0.05 },
+    { "id": "b", "type": "code-run", "task": "b", "depends_on": ["a"], "max_turns": 2, "max_budget_usd": 0.05 }
+  ]
+}

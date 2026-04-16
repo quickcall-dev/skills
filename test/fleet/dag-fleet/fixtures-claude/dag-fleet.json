@@ -1,0 +1,20 @@
+{
+  "fleet_name": "fleet-test-dag",
+  "fleet_id": "fleet-test-dag",
+  "status": "pending",
+  "config": {
+    "max_concurrent": 4,
+    "model": "haiku",
+    "fallback_model": "haiku",
+    "launch_delay_seconds": 0,
+    "max_budget_fleet": 0
+  },
+  "workers": [
+    { "id": "a", "type": "code-run", "task": "a", "max_turns": 2, "max_budget_usd": 0.05 },
+    { "id": "b", "type": "code-run", "task": "b", "max_turns": 2, "max_budget_usd": 0.05 },
+    { "id": "c", "type": "code-run", "task": "c", "max_turns": 2, "max_budget_usd": 0.05, "depends_on": ["a"] },
+    { "id": "d", "type": "code-run", "task": "d", "max_turns": 2, "max_budget_usd": 0.05 },
+    { "id": "e", "type": "code-run", "task": "e", "max_turns": 2, "max_budget_usd": 0.05 },
+    { "id": "f", "type": "code-run", "task": "f", "max_turns": 2, "max_budget_usd": 0.05, "depends_on": ["a","b","c","d","e"] }
+  ]
+}

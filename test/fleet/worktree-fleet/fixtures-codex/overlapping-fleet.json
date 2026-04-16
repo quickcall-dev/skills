@@ -1,0 +1,28 @@
+{
+  "fleet_name": "test-worktree-overlap-codex",
+  "type": "worktree",
+  "config": {
+    "max_concurrent": 2,
+    "provider": "codex",
+    "model": "gpt-5.4-mini",
+    "fallback_model": "haiku"
+  },
+  "workers": [
+    {
+      "id": "worker-a",
+      "task": "Refactor src/utils/foo.ts",
+      "target_files": ["src/utils/foo.ts"],
+      "branch": "codex-refactor-a",
+      "type": "code-run",
+      "max_budget_usd": 1.0
+    },
+    {
+      "id": "worker-b",
+      "task": "Also modify src/utils/foo.ts",
+      "target_files": ["src/utils/foo.ts", "src/lib/bar.ts"],
+      "branch": "codex-refactor-b",
+      "type": "code-run",
+      "max_budget_usd": 1.0
+    }
+  ]
+}

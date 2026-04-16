@@ -1,0 +1,18 @@
+{
+  "fleet_name": "fleet-test-completion",
+  "fleet_id": "fleet-test-completion",
+  "status": "pending",
+  "on_complete_hook": "FIXTURES_DIR/hooks/notify.sh",
+  "config": {
+    "max_concurrent": 3,
+    "model": "haiku",
+    "fallback_model": "haiku",
+    "launch_delay_seconds": 0,
+    "max_budget_fleet": 0
+  },
+  "workers": [
+    { "id": "w1", "type": "code-run", "task": "w1", "max_turns": 2, "max_budget_usd": 0.05 },
+    { "id": "w2", "type": "code-run", "task": "w2", "max_turns": 2, "max_budget_usd": 0.05 },
+    { "id": "w3", "type": "code-run", "task": "w3", "max_turns": 2, "max_budget_usd": 0.05 }
+  ]
+}

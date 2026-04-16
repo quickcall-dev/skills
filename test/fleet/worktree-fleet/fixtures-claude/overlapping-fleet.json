@@ -1,0 +1,23 @@
+{
+  "fleet_name": "test-worktree-overlap",
+  "type": "worktree",
+  "config": {
+    "max_concurrent": 2,
+    "model": "haiku",
+    "fallback_model": "haiku"
+  },
+  "workers": [
+    {
+      "id": "worker-a",
+      "task": "Refactor src/utils/foo.ts",
+      "target_files": ["src/utils/foo.ts"],
+      "branch": "refactor-a"
+    },
+    {
+      "id": "worker-b",
+      "task": "Also modify src/utils/foo.ts",
+      "target_files": ["src/utils/foo.ts", "src/lib/bar.ts"],
+      "branch": "refactor-b"
+    }
+  ]
+}
