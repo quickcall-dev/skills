@@ -3,6 +3,10 @@ name: fleet-plan
 description: Analyze a task, pick the right fleet type, and generate a ready-to-launch fleet (fleet.json + prompt.md files). Discovers available fleet skills dynamically. Use when the user wants to run work in parallel, asks to "plan a fleet", or says "fleet-plan".
 argument-hint: "<description of work to parallelize>"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Bash(mkdir *)
+license: Apache-2.0
+metadata:
+  author: Sagar Sarkale
+  version: "1.0"
 ---
 
 # Fleet Plan

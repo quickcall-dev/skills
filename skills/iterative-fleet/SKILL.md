@@ -4,6 +4,10 @@ description: Reviewer-gated iterative fleet for headless `claude -p` or `codex e
 argument-hint: "[launch|status|pause|resume|kill] [args]"
 allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
 model: claude-opus-4-6
+license: Apache-2.0
+metadata:
+  author: Sagar Sarkale
+  version: "1.0"
 ---
 
 # Iterative Fleet

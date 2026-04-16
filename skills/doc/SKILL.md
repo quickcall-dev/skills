@@ -3,6 +3,10 @@ name: doc
 description: Create and manage structured documentation — experiments, plans, findings, checkpoints, research, learnings. Config-driven, parallel-safe.
 argument-hint: "[start|expt|plan|finding|ckpt|research|review|learn|list|status|resume] [args]"
 allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob, Grep
+license: Apache-2.0
+metadata:
+  author: Sagar Sarkale
+  version: "1.0"
 ---
 
 # Documentation Skill

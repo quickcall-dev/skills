@@ -4,6 +4,10 @@ description: Independence-validated parallel fleet that runs each worker (claude
 argument-hint: "[launch|status|merge|cleanup] [args]"
 allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
 model: claude-sonnet-4-6
+license: Apache-2.0
+metadata:
+  author: Sagar Sarkale
+  version: "1.0"
 ---
 
 # Worktree Fleet

@@ -1,0 +1,4 @@
+# npx skills add creates these (project-level install artifacts)
+.agents/
+.claude/
+skills-lock.json

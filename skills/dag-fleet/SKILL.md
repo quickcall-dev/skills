@@ -4,6 +4,10 @@ description: Persistent, budgeted, DAG-ordered runner for parallel `claude -p` o
 argument-hint: "[launch|relaunch-worker|status|kill|report] [args]"
 allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
 model: claude-sonnet-4-6
+license: Apache-2.0
+metadata:
+  author: Sagar Sarkale
+  version: "1.0"
 ---
 
 # Fleet
