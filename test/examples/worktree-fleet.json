@@ -1,0 +1,27 @@
+{
+  "fleet_name": "example-worktree",
+  "type": "worktree",
+  "config": {
+    "max_concurrent": 2,
+    "model": "haiku",
+    "fallback_model": "haiku"
+  },
+  "workers": [
+    {
+      "id": "add-readme",
+      "task": "Add a README.md with project description and usage instructions",
+      "target_files": ["README.md"],
+      "branch": "add-readme",
+      "max_turns": 3,
+      "max_budget_usd": 0.02
+    },
+    {
+      "id": "add-license",
+      "task": "Add an MIT LICENSE file with current year and placeholder name",
+      "target_files": ["LICENSE"],
+      "branch": "add-license",
+      "max_turns": 3,
+      "max_budget_usd": 0.02
+    }
+  ]
+}

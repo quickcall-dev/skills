@@ -1,0 +1,35 @@
+{
+  "fleet_name": "example-dag",
+  "status": "pending",
+  "config": {
+    "max_concurrent": 2,
+    "model": "haiku",
+    "fallback_model": "haiku",
+    "launch_delay_seconds": 2,
+    "max_budget_fleet": 0.10
+  },
+  "workers": [
+    {
+      "id": "hello",
+      "type": "code-run",
+      "task": "Create hello-world script",
+      "max_turns": 3,
+      "max_budget_usd": 0.03
+    },
+    {
+      "id": "utils",
+      "type": "code-run",
+      "task": "Create string utils module",
+      "max_turns": 3,
+      "max_budget_usd": 0.03
+    },
+    {
+      "id": "test-all",
+      "type": "code-run",
+      "task": "Write tests for hello and utils",
+      "max_turns": 3,
+      "max_budget_usd": 0.03,
+      "depends_on": ["hello", "utils"]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "fleet_name": "example-autoresearch",
+  "config": {
+    "model": "haiku",
+    "fallback_model": "haiku",
+    "budget_per_iter": 0.02,
+    "max_turns": 5,
+    "provider": "claude"
+  },
+  "problem": {
+    "program_md": "program.md",
+    "eval_command": "python3 eval.py",
+    "metric_direction": "maximize",
+    "metric_regex": "accuracy: ([0-9.]+)",
+    "workdir": ""
+  },
+  "stop_when": {
+    "max_iterations": 5,
+    "cost_cap_usd": 0.15
+  },
+  "search": {
+    "enabled": false,
+    "plateau_threshold": 3
+  }
+}

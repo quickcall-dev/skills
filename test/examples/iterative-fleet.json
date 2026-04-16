@@ -1,0 +1,33 @@
+{
+  "fleet_name": "example-iterative",
+  "type": "iterative",
+  "config": {
+    "max_concurrent": 3,
+    "model": "haiku",
+    "fallback_model": "haiku",
+    "launch_delay_seconds": 2
+  },
+  "workers": [
+    {
+      "id": "writer",
+      "type": "code-run",
+      "task": "Write the fizzbuzz function",
+      "max_budget_per_iter": 0.02
+    },
+    {
+      "id": "tester",
+      "type": "code-run",
+      "task": "Write and run tests for fizzbuzz",
+      "max_budget_per_iter": 0.02
+    },
+    {
+      "id": "reviewer",
+      "type": "reviewer",
+      "task": "Review code quality and test coverage"
+    }
+  ],
+  "stop_when": {
+    "reviewer_lgtm_count": 1,
+    "max_iterations": 3
+  }
+}
