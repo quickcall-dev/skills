@@ -65,9 +65,40 @@ show_status() {
     trailing=$(jq -r '.trailing_discards // 0' "${FLEET_ROOT}/.orch-state.json" 2>/dev/null || echo 0)
     is_search=$(jq -r '.is_search // false' "${FLEET_ROOT}/.orch-state.json" 2>/dev/null || echo false)
     best_metric=$(jq -r '.best_metric // "n/a"' "${FLEET_ROOT}/.orch-state.json" 2>/dev/null || echo "n/a")
-    total_cost=$(jq -r '.total_cost // "0.00"' "${FLEET_ROOT}/.orch-state.json" 2>/dev/null || echo "0.00")
     status=$(jq -r '.status // "running"' "${FLEET_ROOT}/.orch-state.json" 2>/dev/null || echo "running")
   fi
+
+  # Calculate total cost live from session logs (don't trust stale .orch-state.json)
+  total_cost="0.00"
+  for _jsonl in "${FLEET_ROOT}"/logs/session-iter-*.jsonl; do
+    [[ -f "${_jsonl}" ]] || continue
+    local _cost
+    if grep -q '"type":"result"' "${_jsonl}" 2>/dev/null; then
+      _cost=$(grep '"type":"result"' "${_jsonl}" 2>/dev/null | tail -1 | \
+        jq -r '.total_cost_usd // 0' 2>/dev/null || echo "0")
+    else
+      _cost=$(python3 -c "
+import json, sys
+total = 0.0
+PRICING = {'haiku':(0.80,0.08,1.00,4.00),'sonnet':(3.00,0.30,3.75,15.00),'opus':(15.00,1.50,18.75,75.00)}
+def get_pricing(m):
+    for k,v in PRICING.items():
+        if k in (m or ''): return v
+    return PRICING['sonnet']
+for line in open(sys.argv[1]):
+    try:
+        ev=json.loads(line.strip())
+        if ev.get('type')!='assistant': continue
+        msg=ev.get('message',{}); u=msg.get('usage',{})
+        if not u: continue
+        ip,crp,ccp,op=get_pricing(msg.get('model',''))
+        total+=(u.get('input_tokens',0)*ip+u.get('cache_read_input_tokens',0)*crp+u.get('cache_creation_input_tokens',0)*ccp+u.get('output_tokens',0)*op)/1e6
+    except: pass
+print(f'{total:.6f}')
+" "${_jsonl}" 2>/dev/null || echo "0")
+    fi
+    total_cost=$(awk "BEGIN {printf \"%.2f\", ${total_cost} + ${_cost}}")
+  done
 
   local is_paused=false
   [[ -f "${FLEET_ROOT}/.paused" ]] && is_paused=true
@@ -217,8 +248,40 @@ print(last or "—")
     [[ -f "${jsonl}" ]] || continue
     local iter_num cost_val
     iter_num=$(basename "${jsonl}" | sed 's/session-iter-\(.*\)\.jsonl/\1/')
-    cost_val=$(grep '"type":"result"' "${jsonl}" 2>/dev/null | tail -1 | \
-      jq -r '.total_cost_usd // 0' 2>/dev/null || echo "0")
+    if grep -q '"type":"result"' "${jsonl}" 2>/dev/null; then
+      cost_val=$(grep '"type":"result"' "${jsonl}" 2>/dev/null | tail -1 | \
+        jq -r '.total_cost_usd // 0' 2>/dev/null || echo "0")
+    else
+      cost_val=$(python3 -c "
+import json, sys
+total = 0.0
+PRICING = {
+    'haiku':  (0.80, 0.08, 1.00, 4.00),
+    'sonnet': (3.00, 0.30, 3.75, 15.00),
+    'opus':   (15.00, 1.50, 18.75, 75.00),
+}
+def get_pricing(model_id):
+    for k, v in PRICING.items():
+        if k in (model_id or ''):
+            return v
+    return PRICING['sonnet']
+for line in open(sys.argv[1]):
+    line = line.strip()
+    if not line: continue
+    try:
+        ev = json.loads(line)
+        if ev.get('type') != 'assistant': continue
+        msg = ev.get('message', {})
+        u = msg.get('usage', {})
+        if not u: continue
+        model = msg.get('model', '')
+        inp_p, cache_r_p, cache_c_p, out_p = get_pricing(model)
+        cost = (u.get('input_tokens', 0) * inp_p + u.get('cache_read_input_tokens', 0) * cache_r_p + u.get('cache_creation_input_tokens', 0) * cache_c_p + u.get('output_tokens', 0) * out_p) / 1_000_000.0
+        total += cost
+    except: pass
+print(f'{total:.6f}')
+" "${jsonl}" 2>/dev/null || echo "0")
+    fi
     cost_val=$(awk "BEGIN {printf \"%.2f\", ${cost_val}}")
     printf "  iter %-4s  \$%s\n" "${iter_num}" "${cost_val}"
     found_costs=1

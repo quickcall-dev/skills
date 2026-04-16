@@ -211,13 +211,59 @@ count_trailing_discards() {
     awk -F'\t' 'tolower($3) != "discard" && tolower($3) != "crash" {exit} {count++} END {print count+0}'
 }
 
+_read_session_cost() {
+  local jsonl="$1"
+  [[ -f "${jsonl}" ]] || { echo "0"; return; }
+  # Prefer result event (has exact cost from API)
+  if grep -q '"type":"result"' "${jsonl}" 2>/dev/null; then
+    grep '"type":"result"' "${jsonl}" 2>/dev/null | tail -1 | \
+      jq -r '.total_cost_usd // 0' 2>/dev/null || echo "0"
+  else
+    # Sum usage from assistant messages (estimate from token counts)
+    python3 -c "
+import json, sys
+total = 0.0
+# Model pricing per million tokens: {input, cache_read, cache_create, output}
+PRICING = {
+    'haiku':  (0.80, 0.08, 1.00, 4.00),
+    'sonnet': (3.00, 0.30, 3.75, 15.00),
+    'opus':   (15.00, 1.50, 18.75, 75.00),
+}
+def get_pricing(model_id):
+    for k, v in PRICING.items():
+        if k in (model_id or ''):
+            return v
+    return PRICING['sonnet']  # default
+
+for line in open(sys.argv[1]):
+    line = line.strip()
+    if not line: continue
+    try:
+        ev = json.loads(line)
+        if ev.get('type') != 'assistant': continue
+        msg = ev.get('message', {})
+        u = msg.get('usage', {})
+        if not u: continue
+        model = msg.get('model', '')
+        inp_p, cache_r_p, cache_c_p, out_p = get_pricing(model)
+        inp = u.get('input_tokens', 0)
+        outp = u.get('output_tokens', 0)
+        cache_read = u.get('cache_read_input_tokens', 0)
+        cache_create = u.get('cache_creation_input_tokens', 0)
+        cost = (inp * inp_p + cache_read * cache_r_p + cache_create * cache_c_p + outp * out_p) / 1_000_000.0
+        total += cost
+    except: pass
+print(f'{total:.6f}')
+" "${jsonl}" 2>/dev/null || echo "0"
+  fi
+}
+
 get_total_cost() {
   local total=0
   for jsonl in "${FLEET_ROOT}"/logs/session-iter-*.jsonl; do
     [[ -f "${jsonl}" ]] || continue
     local cost
-    cost=$(grep '"type":"result"' "${jsonl}" 2>/dev/null | tail -1 | \
-      jq -r '.total_cost_usd // 0' 2>/dev/null || echo "0")
+    cost=$(_read_session_cost "${jsonl}")
     total=$(awk "BEGIN {printf \"%.2f\", ${total} + ${cost}}")
   done
   echo "${total}"
