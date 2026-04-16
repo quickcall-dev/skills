@@ -53,6 +53,7 @@ latest_ckpt=$(find "$EXPT_PATH/checkpoints" -name "*.md" -type f 2>/dev/null | s
 if [[ -n "$latest_ckpt" ]]; then
   echo ""
   echo "Latest checkpoint: $(basename "$latest_ckpt")"
-  echo "---"
+  echo "<file-content source=\"$(basename "$latest_ckpt")\">"
   head -15 "$latest_ckpt" | sed 's/^/  /'
+  echo "</file-content>"
 fi

@@ -165,6 +165,16 @@ RECORD=$(jq -r 'if .config.record == false then "false" else "true" end' "${FLEE
 
 WORKER_COUNT=$(jq '.workers | length' "${FLEET_JSON}")
 
+# Validate fleet.json inputs against shell injection
+validate_fleet_id "fleet_name" "${FLEET_NAME}"
+validate_fleet_id "fleet_id" "${FLEET_ID}"
+validate_fleet_id "model" "${DEFAULT_MODEL}"
+validate_fleet_id "fallback_model" "${FALLBACK_MODEL}"
+validate_fleet_id "provider" "${DEFAULT_PROVIDER}"
+for _wid in $(jq -r '.workers[].id' "${FLEET_JSON}"); do
+  validate_fleet_id "worker_id" "${_wid}"
+done
+
 # Validate required CLI tools based on provider
 if [[ "${DEFAULT_PROVIDER}" == "codex" ]]; then
   command -v codex &>/dev/null || die "codex CLI is required but not found in PATH"

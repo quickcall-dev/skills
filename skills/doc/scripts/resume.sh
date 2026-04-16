@@ -32,7 +32,9 @@ latest_plan=$(find "$EXPT_PATH/plans" -name "*.md" -type f 2>/dev/null | sort | 
 if [[ -n "$latest_plan" ]]; then
   echo ""
   echo "--- Latest plan: $(basename "$latest_plan") ---"
+  echo "<file-content source=\"$(basename "$latest_plan")\">"
   cat "$latest_plan"
+  echo "</file-content>"
 fi
 
 # Latest checkpoint
@@ -40,7 +42,9 @@ latest_ckpt=$(find "$EXPT_PATH/checkpoints" -name "*.md" -type f 2>/dev/null | s
 if [[ -n "$latest_ckpt" ]]; then
   echo ""
   echo "--- Latest checkpoint: $(basename "$latest_ckpt") ---"
+  echo "<file-content source=\"$(basename "$latest_ckpt")\">"
   cat "$latest_ckpt"
+  echo "</file-content>"
 fi
 
 # List findings

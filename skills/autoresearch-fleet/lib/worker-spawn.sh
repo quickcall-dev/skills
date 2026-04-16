@@ -27,6 +27,16 @@
 #     [--codex-extra-flags "-c 'web_search=\"live\"'"] \
 #   )
 
+# Validate that a value is safe for shell interpolation (alphanumeric, hyphens, underscores, dots)
+validate_safe_id() {
+  local label="$1" value="$2"
+  if [[ ! "$value" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+    echo "FATAL: ${label} contains unsafe characters: '${value}'" >&2
+    echo "  Only alphanumeric, hyphens, underscores, and dots are allowed." >&2
+    return 1
+  fi
+}
+
 build_inner_cmd() {
   local cwd="" fleet_root="" worker_id="" worker_prompt="" worker_model=""
   local fallback_model="" max_turns="" max_budget="" session_name=""
@@ -55,6 +65,12 @@ build_inner_cmd() {
       *) shift ;;
     esac
   done
+
+  # Validate inputs that get interpolated into shell commands
+  validate_safe_id "worker-id" "${worker_id}" || return 1
+  validate_safe_id "worker-model" "${worker_model}" || return 1
+  [[ -n "${fallback_model}" ]] && { validate_safe_id "fallback-model" "${fallback_model}" || return 1; }
+  [[ -n "${session_name}" ]] && { validate_safe_id "session-name" "${session_name}" || return 1; }
 
   local cmd="cd '${cwd}'"
   cmd+=" && unset CLAUDECODE 2>/dev/null || true"

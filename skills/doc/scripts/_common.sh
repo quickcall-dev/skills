@@ -20,11 +20,17 @@ REPO_ROOT="$(find_repo_root)"
 
 # Read a config value using python
 cfg() {
+  local key="$1"
+  # Validate key: only alphanumeric, dots, underscores allowed
+  if [[ ! "$key" =~ ^[a-zA-Z0-9._]+$ ]]; then
+    echo "ERROR: invalid config key: '$key'" >&2
+    return 1
+  fi
   python3 -c "
 import yaml, sys
 with open('$CONFIG_FILE') as f:
     c = yaml.safe_load(f)
-keys = '$1'.split('.')
+keys = '$key'.split('.')
 v = c
 for k in keys:
     if isinstance(v, dict):
@@ -130,6 +136,11 @@ resolve_experiment() {
   local index="${1:-}"
 
   if [[ -n "$index" ]]; then
+    # Validate index: digits only (prevents arithmetic injection)
+    if [[ ! "$index" =~ ^[0-9]+$ ]]; then
+      echo "ERROR: experiment index must be numeric, got: '$index'" >&2
+      exit 1
+    fi
     local padded
     padded=$(printf "%03d" "$((10#$index))")
     local matches=()

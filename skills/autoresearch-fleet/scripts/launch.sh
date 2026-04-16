@@ -76,6 +76,12 @@ MODEL=$(jq -r '.config.model // "sonnet"' "${FLEET_JSON}")
 FALLBACK_MODEL=$(jq -r '.config.fallback_model // "haiku"' "${FLEET_JSON}")
 PROVIDER=$(jq -r '.config.provider // "claude"' "${FLEET_JSON}")
 BUDGET_PER_ITER=$(jq -r '.config.budget_per_iter // 1.00' "${FLEET_JSON}")
+
+# Validate fleet.json inputs against shell injection
+validate_fleet_id "fleet_name" "${FLEET_NAME}"
+validate_fleet_id "model" "${MODEL}"
+validate_fleet_id "fallback_model" "${FALLBACK_MODEL}"
+validate_fleet_id "provider" "${PROVIDER}"
 MAX_TURNS=$(jq -r '.config.max_turns // 0' "${FLEET_JSON}")
 
 EVAL_CMD=$(jq -r '.problem.eval_command // ""' "${FLEET_JSON}")
@@ -372,7 +378,7 @@ while true; do
   fi
 
   agent_rc=0
-  eval "${AGENT_CMD}" || agent_rc=$?
+  bash -c "${AGENT_CMD}" || agent_rc=$?
 
   if [[ ${agent_rc} -ne 0 ]]; then
     warn "Agent exited with rc=${agent_rc}"

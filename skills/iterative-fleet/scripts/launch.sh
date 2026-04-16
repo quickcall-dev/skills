@@ -110,6 +110,15 @@ DEFAULT_REASONING_EFFORT=$(jq -r '.config.reasoning_effort // ""' "${FLEET_JSON}
 MAX_CONCURRENT=$(jq -r '.config.max_concurrent // 5' "${FLEET_JSON}")
 LAUNCH_DELAY=$(jq -r '.config.launch_delay_seconds // 2' "${FLEET_JSON}")
 
+# Validate fleet.json inputs against shell injection
+validate_fleet_id "fleet_name" "${FLEET_NAME}"
+validate_fleet_id "model" "${DEFAULT_MODEL}"
+validate_fleet_id "fallback_model" "${FALLBACK_MODEL}"
+validate_fleet_id "provider" "${DEFAULT_PROVIDER}"
+for _wid in $(jq -r '.workers[].id' "${FLEET_JSON}"); do
+  validate_fleet_id "worker_id" "${_wid}"
+done
+
 # Validate required CLI tools based on provider
 if [[ "${DRY_RUN}" -eq 0 ]]; then
   if [[ "${DEFAULT_PROVIDER}" == "codex" ]]; then
