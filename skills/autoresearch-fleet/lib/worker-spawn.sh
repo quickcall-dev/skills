@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# _lib/worker-spawn.sh — shared INNER_CMD builder for worker spawning
+# lib/worker-spawn.sh — shared INNER_CMD builder for worker spawning
 #
 # Supports two providers:
 #   claude (default) — builds: cat prompt | claude -p --model X ...
 #   codex            — builds: cat prompt | codex exec - -m X --json ...
 #
 # Usage:
-#   source ../../_lib/worker-spawn.sh
+#   source ../lib/worker-spawn.sh
 #   INNER_CMD=$(build_inner_cmd \
 #     --cwd "/path/to/workdir" \
 #     --fleet-root "/path/to/fleet" \

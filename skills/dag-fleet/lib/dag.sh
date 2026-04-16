@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# _lib/dag.sh — shared DAG primitives for fleet worker ordering
+# lib/dag.sh — shared DAG primitives for fleet worker ordering
 #
 # All fleet types that support depends_on source this file.
 # Functions use fleet.json as the single source of truth for worker ordering.
 #
 # Usage:
-#   source "${SCRIPT_DIR}/../../_lib/dag.sh"
+#   source "${SCRIPT_DIR}/../lib/dag.sh"
 #   dag_topo_sort "fleet.json"          # prints worker IDs in topo order
 #   dag_count_layers "fleet.json"       # prints number of layers
 #   dag_get_layer_workers 0 "fleet.json"  # prints worker IDs in layer 0

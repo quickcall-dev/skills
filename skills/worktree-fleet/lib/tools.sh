@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# _lib/tools.sh — shared tool-restriction mapping per worker type
+# lib/tools.sh — shared tool-restriction mapping per worker type
 #
 # Claude workers use --disallowed-tools (per-tool granularity).
 # Codex workers use --sandbox modes + -c config overrides.

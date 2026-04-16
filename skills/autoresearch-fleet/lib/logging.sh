@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# _lib/logging.sh — shared color constants and logging helpers for fleet skills
+# lib/logging.sh — shared color constants and logging helpers for fleet skills
 
 # Colors
 RED='\033[0;31m'
