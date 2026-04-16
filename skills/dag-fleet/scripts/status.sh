@@ -85,14 +85,37 @@ show_status() {
   local rule_w=$(( id_w + model_w + 60 ))
   (( rule_w < 100 )) && rule_w=100
 
+  # Fleet elapsed time from launched_at
+  local elapsed_seconds=0 elapsed_str="n/a"
+  if [[ -f "$FLEET_JSON" ]]; then
+    local launched_at
+    launched_at=$(jq -r '.launched_at // empty' "$FLEET_JSON" 2>/dev/null)
+    if [[ -n "$launched_at" ]]; then
+      local launch_epoch
+      launch_epoch=$(date -d "$launched_at" +%s 2>/dev/null || echo 0)
+      if [[ $launch_epoch -gt 0 ]]; then
+        elapsed_seconds=$((now - launch_epoch))
+        if [[ $elapsed_seconds -lt 60 ]]; then
+          elapsed_str="${elapsed_seconds}s"
+        elif [[ $elapsed_seconds -lt 3600 ]]; then
+          elapsed_str="$((elapsed_seconds / 60))m $((elapsed_seconds % 60))s"
+        else
+          elapsed_str="$((elapsed_seconds / 3600))h $((elapsed_seconds % 3600 / 60))m"
+        fi
+      fi
+    fi
+  fi
+
   if [[ "$OPT_JSON" == "true" ]]; then
     echo "{"
     echo "  \"fleet_root\": \"${FLEET_ROOT}\","
     echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\","
+    echo "  \"elapsed_seconds\": ${elapsed_seconds},"
     echo "  \"workers\": ["
   else
     echo -e "${BOLD}Fleet Status — $(date -u +"%Y-%m-%d %H:%M:%S UTC")${NC}"
     echo -e "Fleet root: ${CYAN}${FLEET_ROOT}${NC}"
+    [[ "$elapsed_str" != "n/a" ]] && echo -e "Elapsed: ${BOLD}${elapsed_str}${NC}"
     echo ""
     printf "${BOLD}${CYAN}%-${id_w}s  %-10s  %-${model_w}s  %-16s  %9s  %7s  %-s${NC}\n" \
       "ID" "STATUS" "MODEL" "LAST ACTIVITY" "COST" "RETRIES" "LAST MSG"
