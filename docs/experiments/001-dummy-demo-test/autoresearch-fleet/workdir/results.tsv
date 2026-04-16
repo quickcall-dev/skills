@@ -1,3 +1,5 @@
 commit	metric	status	description
 19c6bae	101.8	keep	fix: include uppercase vowels in count
 a03f049	101.79	keep	update: use set for vowel lookup O(1)
+83ad1db	101.79	keep	update: use sum() with generator expression
+discard	56.36	discard	str.translate() broken logic
