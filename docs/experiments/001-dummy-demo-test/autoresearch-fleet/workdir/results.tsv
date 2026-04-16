@@ -6,3 +6,9 @@ discard	56.36	discard	str.translate() broken logic
 7e4f09a	101.82	keep	update: sum individual vowel counts
 discard	101.8	discard	frozenset worse than sum().count()
 discard	101.76	discard	set lookup slower than count() 10x
+2089ce8	101.82	keep	update: lowercase text once, count 5 vowels
+discard	101.8	discard	explicit loop slower than sum(count())
+discard	101.79	discard	regex findall slower than sum(count())
+discard	101.8	discard	compiled regex pattern slower
+discard	101.79	discard	single pass with 'in' check instead of 5 count() calls
+e977bbf	101.82	keep	[search] update: use map() instead of generator expression for count()
