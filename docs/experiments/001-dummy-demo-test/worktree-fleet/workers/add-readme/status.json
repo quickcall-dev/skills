@@ -1,8 +1,0 @@
-{
-  "worker_id": "add-readme",
-  "branch": "add-readme",
-  "worktree": "/home/sagar/skills/docs/experiments/001-dummy-demo-test/worktree-fleet/worktrees/add-readme",
-  "status": "RUNNING",
-  "task": "Create README.md for minitools Python library",
-  "last_updated": "2026-04-16T12:15:09Z"
-}
