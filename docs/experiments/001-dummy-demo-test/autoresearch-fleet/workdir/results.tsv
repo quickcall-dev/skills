@@ -3,3 +3,4 @@ commit	metric	status	description
 a03f049	101.79	keep	update: use set for vowel lookup O(1)
 83ad1db	101.79	keep	update: use sum() with generator expression
 discard	56.36	discard	str.translate() broken logic
+7e4f09a	101.82	keep	update: sum individual vowel counts
