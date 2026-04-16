@@ -1,0 +1,44 @@
+# Default config for /doc skill
+# Edit this file to customize for your setup
+
+docs_root: docs
+
+# Folder skeleton created by /doc init
+structure:
+  architecture: {}
+  guides: {}
+  learnings: {}
+  research: {}
+  experiments: {}
+
+# Experiment subdirs created by /doc expt (or /doc start <name>)
+experiment_dirs:
+  - plans
+  - findings
+  - checkpoints
+  - research
+  - review
+
+# Valid learnings domains — learn.sh validates against this list
+# Add domains as needed for your repo
+learnings_domains:
+  - backend
+  - frontend
+  - data
+  - pipeline
+  - bugs
+  - issues
+  - skills
+  - tooling
+
+# File naming templates
+naming:
+  experiment: "{NNN}-{name}"
+  plan: "{NN}-{title}.md"
+  finding: "{NN}-{title}.md"
+  checkpoint: "{NN}-{description}.md"
+  research_prompt: "{NN}-prompt-{topic}.md"
+  research_response: "{NN}-res-{topic}.md"
+  review: "{NN}-review-{title}.md"
+  learning: "{NNN}-{title}.md"
+  timestamp: "%Y-%m-%d %H:%M UTC"
