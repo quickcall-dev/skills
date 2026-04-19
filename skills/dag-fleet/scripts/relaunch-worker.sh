@@ -129,6 +129,7 @@ FLEET_NAME=$(jq -r '.fleet_name // "fleet"' "${FLEET_JSON}")
 DEFAULT_MODEL=$(jq -r '.config.model // "sonnet"' "${FLEET_JSON}")
 FALLBACK_MODEL=$(jq -r '.config.fallback_model // "haiku"' "${FLEET_JSON}")
 KEEP_PANES_OPEN=$(jq -r '.config.keep_panes_open // false' "${FLEET_JSON}")
+RECORD=$(jq -r 'if .config.record == true then "true" else "false" end' "${FLEET_JSON}")
 
 TMUX_SESSION="${FLEET_NAME}"
 
@@ -257,9 +258,9 @@ else
   INNER_CMD+="; touch '${WORKER_DIR}/.done'; sleep \${KEEP_PANE_OPEN_SECONDS:-30}"
 fi
 
-# Wrap in asciinema if available
+# Wrap in asciinema if enabled (config.record, default false) and available
 WORKER_RECORDING="${WORKER_DIR}/${WORKER_ID}.relaunch.${ROTATE_TS}.cast"
-if command -v asciinema &>/dev/null; then
+if [[ "${RECORD}" == "true" ]] && command -v asciinema &>/dev/null; then
   RUNNER_SCRIPT="${WORKER_DIR}/.run.sh"
   echo "#!/bin/bash" > "${RUNNER_SCRIPT}"
   echo "${INNER_CMD}" >> "${RUNNER_SCRIPT}"

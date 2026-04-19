@@ -161,7 +161,7 @@ DEFAULT_REASONING_EFFORT=$(jq -r '.config.reasoning_effort // ""' "${FLEET_JSON}
 LAUNCH_DELAY=$(jq -r '.config.launch_delay_seconds // 3' "${FLEET_JSON}")
 MAX_BUDGET_FLEET=$(jq -r 'if (.config.max_budget_fleet == null or .config.max_budget_fleet == "null" or .config.max_budget_fleet == 0) then "0" else (.config.max_budget_fleet | tostring) end' "${FLEET_JSON}")
 KEEP_PANES_OPEN=$(jq -r '.config.keep_panes_open // false' "${FLEET_JSON}")
-RECORD=$(jq -r 'if .config.record == false then "false" else "true" end' "${FLEET_JSON}")
+RECORD=$(jq -r 'if .config.record == true then "true" else "false" end' "${FLEET_JSON}")
 
 WORKER_COUNT=$(jq '.workers | length' "${FLEET_JSON}")
 
@@ -576,7 +576,7 @@ EOF
   fi
 
   # Always write a runner script to avoid quoting issues when spawning via tmux.
-  # Then optionally wrap with asciinema recording if enabled (config.record, default true).
+  # Then optionally wrap with asciinema recording if enabled (config.record, default false).
   RUNNER_SCRIPT="${WORKER_DIR}/.run.sh"
   echo "#!/bin/bash" > "${RUNNER_SCRIPT}"
   echo "${INNER_CMD}" >> "${RUNNER_SCRIPT}"
