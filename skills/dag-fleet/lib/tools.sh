@@ -54,8 +54,10 @@ get_codex_sandbox() {
 # ---------------------------------------------------------------------------
 get_codex_extra_flags() {
   local worker_type="$1"
+  local net_flag="-c 'sandbox_workspace_write.network_access=true'"
   case "${worker_type}" in
-    research) echo "-c 'web_search=\"live\"'" ;;
-    *)        echo "" ;;
+    research)              echo "-c 'web_search=\"live\"' ${net_flag}" ;;
+    write|code-run|reviewer|orchestrator) echo "${net_flag}" ;;
+    *)                     echo "" ;;
   esac
 }
