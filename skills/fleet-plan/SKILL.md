@@ -208,6 +208,15 @@ After generating everything, tell the user:
 
 **ALWAYS give the user the status command.** This is mandatory.
 
+## Preferred defaults
+
+- **Implementation workers:** codex `gpt-5.3-codex`, `reasoning_effort: "medium"`
+- **Reviewer workers:** claude `opus` (`claude-opus-4-6`), `reasoning_effort: "medium"`
+- **max_turns:** unset (unlimited)
+- **max_iterations** (iterative-fleet `stop_when`): `10`
+
+Override only when user specifies different models/caps in the request.
+
 ## Rationalizations to reject
 
 | Agent says | Rebuttal |
