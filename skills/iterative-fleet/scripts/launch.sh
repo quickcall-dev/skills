@@ -374,9 +374,17 @@ dag_spawn_worker() {
   # Kill any prior tmux window for this worker
   tmux kill-window -t "\${TMUX_SESSION}:\${wid}" 2>/dev/null || true
 
-  # Clear stale state
+  # Clear stale state — snapshot leftover session.jsonl into prev iter first
   local wdir="\${FLEET_ROOT}/workers/\${wid}"
-  rm -f "\${wdir}/session.jsonl" "\${wdir}/.done" "\${wdir}/.failed"
+  local prev_iter=\$((iter - 1))
+  if [[ -f "\${wdir}/session.jsonl" && "\${prev_iter}" -ge 1 ]]; then
+    mkdir -p "\${FLEET_ROOT}/iterations/\${prev_iter}/workers/\${wid}"
+    mv "\${wdir}/session.jsonl" \\
+      "\${FLEET_ROOT}/iterations/\${prev_iter}/workers/\${wid}/session.jsonl"
+  else
+    rm -f "\${wdir}/session.jsonl"
+  fi
+  rm -f "\${wdir}/.done" "\${wdir}/.failed"
 
   # Update status
   printf '{"worker_id":"%s","status":"RUNNING","step":"iter-%d","last_updated":"%s","cost_usd":0}\n' \\
@@ -403,13 +411,23 @@ dag_spawn_worker() {
 # Reset worker state between iterations (snapshot costs first)
 reset_workers_for_iteration() {
   local iter="\$1"
-  snapshot_costs_to_ledger "\$((iter - 1))"
+  local prev=\$((iter - 1))
+  snapshot_costs_to_ledger "\${prev}"
   local worker_ids
   worker_ids=\$(jq -r '.workers[].id' "\${FLEET_JSON}" 2>/dev/null)
   for wid in \${worker_ids}; do
     local wdir="\${FLEET_ROOT}/workers/\${wid}"
     tmux kill-window -t "\${TMUX_SESSION}:\${wid}" 2>/dev/null || true
-    rm -f "\${wdir}/session.jsonl" "\${wdir}/.done" "\${wdir}/.failed"
+    # Snapshot session.jsonl into iterations/<prev>/workers/<wid>/ so status.sh
+    # can show per-iteration timing. prompt.md + status.json stay live.
+    if [[ -f "\${wdir}/session.jsonl" && "\${prev}" -ge 1 ]]; then
+      mkdir -p "\${FLEET_ROOT}/iterations/\${prev}/workers/\${wid}"
+      mv "\${wdir}/session.jsonl" \\
+        "\${FLEET_ROOT}/iterations/\${prev}/workers/\${wid}/session.jsonl"
+    else
+      rm -f "\${wdir}/session.jsonl"
+    fi
+    rm -f "\${wdir}/.done" "\${wdir}/.failed"
   done
   log "Reset all worker state for iteration \${iter}"
 }

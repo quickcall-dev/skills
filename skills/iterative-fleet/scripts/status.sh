@@ -64,10 +64,29 @@ show_status() {
 
   [[ -f "${FLEET_ROOT}/.paused" ]] && is_paused=true
 
+  # Fleet elapsed time from launched_at
+  local fleet_elapsed_str="n/a"
+  local launched_at
+  launched_at=$(jq -r '.launched_at // ""' "${FLEET_JSON}" 2>/dev/null || echo "")
+  if [[ -n "${launched_at}" && "${launched_at}" != "null" ]]; then
+    local launch_epoch
+    launch_epoch=$(date -u -d "${launched_at}" +%s 2>/dev/null || echo "")
+    if [[ -n "${launch_epoch}" ]]; then
+      local fleet_elapsed=$((now - launch_epoch))
+      if [[ $fleet_elapsed -lt 60 ]]; then
+        fleet_elapsed_str="${fleet_elapsed}s"
+      elif [[ $fleet_elapsed -lt 3600 ]]; then
+        fleet_elapsed_str="$((fleet_elapsed / 60))m $((fleet_elapsed % 60))s"
+      else
+        fleet_elapsed_str="$((fleet_elapsed / 3600))h $((fleet_elapsed % 3600 / 60))m"
+      fi
+    fi
+  fi
+
   if [[ "$OPT_JSON" == "false" ]]; then
     echo -e "${BOLD}Iterative Fleet — $(date -u +"%Y-%m-%d %H:%M:%S UTC")${NC}"
     echo -e "Fleet:  ${CYAN}${fleet_name}${NC}  root: ${FLEET_ROOT}"
-    echo -e "Status: $(if $is_paused; then echo -e "${YELLOW}PAUSED${NC}"; else echo -e "${GREEN}running${NC}"; fi)  Current iteration: ${BOLD}${iter}${NC}  LGTM count: ${BOLD}${lgtm_count}${NC}"
+    echo -e "Status: $(if $is_paused; then echo -e "${YELLOW}PAUSED${NC}"; else echo -e "${GREEN}running${NC}"; fi)  Current iteration: ${BOLD}${iter}${NC}  LGTM count: ${BOLD}${lgtm_count}${NC}  Elapsed: ${BOLD}${fleet_elapsed_str}${NC}"
     echo ""
   fi
 
@@ -204,6 +223,81 @@ for line in sys.stdin:
         "$wid" "$status" "$elapsed_str" "$ago_str" "\$${cost:-0}" "${last_msg:0:40}"
     fi
   done
+
+  # Per-iteration history — walk iterations/*/workers/*/session.jsonl.
+  if [[ "$OPT_JSON" == "false" && -d "${FLEET_ROOT}/iterations" ]]; then
+    _fmt_dur() {
+      local s=$1
+      [[ $s -lt 0 ]] && s=0
+      if   [[ $s -lt 60 ]];   then printf '%ds'       "$s"
+      elif [[ $s -lt 3600 ]]; then printf '%dm %ds'   $((s/60)) $((s%60))
+      else                         printf '%dh %dm'   $((s/3600)) $((s%3600/60))
+      fi
+    }
+    local iter_dirs=()
+    while IFS= read -r d; do iter_dirs+=("$d"); done < <(
+      find "${FLEET_ROOT}/iterations" -maxdepth 1 -mindepth 1 -type d \
+        -regextype posix-extended -regex '.*/iterations/[0-9]+' 2>/dev/null \
+      | sort -t/ -k999 -V
+    )
+    local shown_iter_header=0
+    local N
+    for itd in "${iter_dirs[@]}"; do
+      N=$(basename "$itd")
+      local wdir="${itd}/workers"
+      [[ -d "$wdir" ]] || continue
+      # Gather per-worker jsonls
+      local worker_lines=()
+      local iter_min=0 iter_max=0
+      local any_worker=0
+      for sess in "${wdir}"/*/session.jsonl; do
+        [[ -f "$sess" ]] || continue
+        any_worker=1
+        local wid; wid=$(basename "$(dirname "$sess")")
+        local ct mt
+        ct=$(stat -c %W "$sess" 2>/dev/null || echo 0)
+        [[ "$ct" == "0" ]] && ct=$(stat -c %Y "$sess" 2>/dev/null || echo 0)
+        mt=$(stat -c %Y "$sess" 2>/dev/null || echo 0)
+        local dur=$((mt - ct))
+        [[ $dur -lt 0 ]] && dur=0
+        (( iter_min == 0 || ct < iter_min )) && iter_min=$ct
+        (( mt > iter_max )) && iter_max=$mt
+        local cost
+        cost=$(tail -1 "$sess" 2>/dev/null | jq -r '.total_cost_usd // 0' 2>/dev/null || echo 0)
+        cost=$(awk "BEGIN {printf \"\$%.2f\", ${cost}}")
+        worker_lines+=("${wid}: $(_fmt_dur "$dur") ${cost}")
+      done
+      (( any_worker == 0 )) && continue
+      if (( shown_iter_header == 0 )); then
+        echo ""
+        echo -e "${BOLD}Per-iteration history:${NC}"
+        shown_iter_header=1
+      fi
+      local iter_span=$((iter_max - iter_min))
+      printf "  ${BOLD}Iter %s${NC}  %-10s   " "$N" "$(_fmt_dur "$iter_span")"
+      local IFS_OLD=$IFS; IFS='|'
+      local joined="${worker_lines[*]}"; joined="${joined//|/   }"
+      IFS=$IFS_OLD
+      echo "$joined"
+    done
+
+    # In-progress iter: workers/<id>/session.jsonl present but not yet
+    # snapshot into iterations/<current>/workers/.
+    local cur_iter_dir="${FLEET_ROOT}/iterations/${iter}/workers"
+    local cur_in_progress=0
+    for wid in "${worker_ids[@]}"; do
+      local live="${FLEET_ROOT}/workers/${wid}/session.jsonl"
+      if [[ -f "$live" && ! -f "${cur_iter_dir}/${wid}/session.jsonl" ]]; then
+        cur_in_progress=1; break
+      fi
+    done
+    if (( cur_in_progress == 1 )); then
+      if (( shown_iter_header == 0 )); then
+        echo ""; echo -e "${BOLD}Per-iteration history:${NC}"; shown_iter_header=1
+      fi
+      printf "  ${BOLD}Iter %s${NC}  ${YELLOW}(in-progress)${NC}\n" "$iter"
+    fi
+  fi
 
   # Displaced repo warnings
   if [[ "$OPT_JSON" == "false" ]]; then

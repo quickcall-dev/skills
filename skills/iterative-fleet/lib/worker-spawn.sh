@@ -111,6 +111,9 @@ _build_claude_cmd() {
   fi
   cmd+=" --max-budget-usd ${max_budget}"
   cmd+=" --name '${session_name}'"
+  if [[ -n "${reasoning_effort}" ]]; then
+    cmd+=" --effort '${reasoning_effort}'"
+  fi
   if [[ -n "${disallowed_tools}" ]]; then
     cmd+=" --disallowed-tools '${disallowed_tools}'"
   fi
