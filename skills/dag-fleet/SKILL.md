@@ -97,6 +97,20 @@ There are two operator-initiated kill paths and **no automatic kills**:
 
 There is no `steer.sh`. There is no mid-flight redirection. The intentional workflow for "I want this worker to take a different direction" is: `kill.sh` it, edit `prompt.md`, `relaunch-worker.sh`. Three steps, fully under operator control.
 
+## Resetting a partially-run fleet
+
+Use when the fleet ran partially (bad prompts, wrong models, hit a bug) and you want to re-launch from scratch without state collision.
+
+```
+bash ${CLAUDE_SKILL_DIR}/scripts/reset.sh <FLEET_ROOT> [--soft|--hard] [--dry-run] [--force]
+```
+
+**Preserved (both levels):** `fleet.json` structure, `workers/{id}/prompt.md`.
+**Gone on `--soft` (default):** prior run outputs archived to `archive/<ts>/`, tmux session killed, status fields in `fleet.json` cleared.
+**Gone on `--hard`:** everything under the fleet root except `fleet.json` + prompts; registry entry removed.
+
+Refuses with exit 2 if live workers detected — pass `--force` to kill them first. Preview with `--dry-run`.
+
 ## Worker types
 
 The `type` field on each worker controls the `--disallowed-tools` set passed to claude. Pick one:

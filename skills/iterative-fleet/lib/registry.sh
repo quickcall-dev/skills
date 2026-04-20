@@ -18,7 +18,7 @@
 # if it does not yet exist.
 # ---------------------------------------------------------------------------
 registry_path() {
-  local path="${HOME}/.claude/fleet-registry.json"
+  local path="${FLEET_REGISTRY_PATH:-${HOME}/.claude/fleet-registry.json}"
   if [[ ! -f "${path}" ]]; then
     mkdir -p "$(dirname "${path}")" 2>/dev/null || true
     printf '[]\n' > "${path}" 2>/dev/null || true

@@ -12,7 +12,7 @@ CANONICAL="$REPO_ROOT/_canonical/fleet-lib"
 # Manifest: skill → space-separated list of required lib files
 # ---------------------------------------------------------------------------
 declare -A MANIFEST
-MANIFEST["dag-fleet"]="logging.sh tools.sh worker-spawn.sh registry.sh dag.sh dag-viz.py"
+MANIFEST["dag-fleet"]="logging.sh tools.sh worker-spawn.sh registry.sh dag.sh dag-viz.py reset.sh"
 MANIFEST["worktree-fleet"]="logging.sh tools.sh worker-spawn.sh registry.sh"
 MANIFEST["iterative-fleet"]="logging.sh tools.sh worker-spawn.sh registry.sh dag.sh"
 MANIFEST["autoresearch-fleet"]="logging.sh worker-spawn.sh registry.sh"
