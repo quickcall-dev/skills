@@ -50,11 +50,13 @@ show_status() {
   local now
   now=$(date +%s)
 
-  local fleet_name iter lgtm_count is_paused
+  local fleet_name iter lgtm_count is_paused is_completed completed_reason
   fleet_name=$(jq -r '.fleet_name // "fleet"' "${FLEET_JSON}" 2>/dev/null || echo "fleet")
   iter=1
   lgtm_count=0
   is_paused=false
+  is_completed=false
+  completed_reason=""
 
   # Read orchestrator state
   if [[ -f "${FLEET_ROOT}/.orch-state.json" ]]; then
@@ -63,6 +65,24 @@ show_status() {
   fi
 
   [[ -f "${FLEET_ROOT}/.paused" ]] && is_paused=true
+  if [[ -f "${FLEET_ROOT}/.completed" ]]; then
+    is_completed=true
+    completed_reason=$(head -1 "${FLEET_ROOT}/.completed" 2>/dev/null || echo "")
+    # Re-derive lgtm_count from reviewer verdicts — stale state file may have
+    # pre-increment value if orchestrator exited before persisting.
+    local derived_lgtm=0 vd rf
+    for rf in "${FLEET_ROOT}"/iterations/*/review.md; do
+      [[ -f "$rf" ]] || continue
+      vd=$(grep -i "verdict:" "$rf" 2>/dev/null | head -1 | \
+        sed 's/.*verdict:[[:space:]]*//' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+      if [[ "$vd" == "lgtm" ]]; then
+        derived_lgtm=$((derived_lgtm + 1))
+      else
+        derived_lgtm=0
+      fi
+    done
+    (( derived_lgtm > lgtm_count )) && lgtm_count=$derived_lgtm
+  fi
 
   # Fleet elapsed time from launched_at
   local fleet_elapsed_str="n/a"
@@ -86,7 +106,18 @@ show_status() {
   if [[ "$OPT_JSON" == "false" ]]; then
     echo -e "${BOLD}Iterative Fleet — $(date -u +"%Y-%m-%d %H:%M:%S UTC")${NC}"
     echo -e "Fleet:  ${CYAN}${fleet_name}${NC}  root: ${FLEET_ROOT}"
-    echo -e "Status: $(if $is_paused; then echo -e "${YELLOW}PAUSED${NC}"; else echo -e "${GREEN}running${NC}"; fi)  Current iteration: ${BOLD}${iter}${NC}  LGTM count: ${BOLD}${lgtm_count}${NC}  Elapsed: ${BOLD}${fleet_elapsed_str}${NC}"
+    local status_label
+    if $is_completed; then
+      status_label="${BOLD}${GREEN}COMPLETED${NC}"
+    elif $is_paused; then
+      status_label="${YELLOW}PAUSED${NC}"
+    else
+      status_label="${GREEN}running${NC}"
+    fi
+    echo -e "Status: ${status_label}  Current iteration: ${BOLD}${iter}${NC}  LGTM count: ${BOLD}${lgtm_count}${NC}  Elapsed: ${BOLD}${fleet_elapsed_str}${NC}"
+    if $is_completed && [[ -n "$completed_reason" ]]; then
+      echo -e "${GRAY}Reason: ${completed_reason}${NC}"
+    fi
     echo ""
   fi
 
@@ -263,8 +294,10 @@ for line in sys.stdin:
         (( iter_min == 0 || ct < iter_min )) && iter_min=$ct
         (( mt > iter_max )) && iter_max=$mt
         local cost
-        cost=$(tail -1 "$sess" 2>/dev/null | jq -r '.total_cost_usd // 0' 2>/dev/null || echo 0)
-        cost=$(awk "BEGIN {printf \"\$%.2f\", ${cost}}")
+        local raw_cost
+        raw_cost=$(tail -1 "$sess" 2>/dev/null | jq -r '.total_cost_usd // 0' 2>/dev/null || echo 0)
+        total_cost=$(awk "BEGIN {printf \"%.2f\", ${total_cost} + ${raw_cost:-0}}")
+        cost=$(awk "BEGIN {printf \"\$%.2f\", ${raw_cost}}")
         worker_lines+=("${wid}: $(_fmt_dur "$dur") ${cost}")
       done
       (( any_worker == 0 )) && continue

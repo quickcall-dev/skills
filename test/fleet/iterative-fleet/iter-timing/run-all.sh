@@ -113,8 +113,69 @@ PY
   cleanup_root "$root"
 }
 
+# ---------- T6 — .completed marker flips status to COMPLETED ----------
+run_T6() {
+  local root; root=$(mkroot T6)
+  bash "${SETUP}" "$root" 2 --final-lgtm --completed
+  local out; out=$(bash "${STATUS}" "$root" 2>&1 | strip_ansi)
+  local fail=""
+  grep -qE 'Status:[[:space:]]*COMPLETED' <<<"$out" || fail+="status not COMPLETED; "
+  grep -qE 'Status:[[:space:]]*running' <<<"$out" && fail+="still shows running; "
+  [[ -z "$fail" ]] && record T6 PASS || record T6 FAIL "$fail"
+  cleanup_root "$root"
+}
+
+# ---------- T7 — total cost sums across ALL iterations, not just live ----------
+run_T7() {
+  local root; root=$(mkroot T7)
+  bash "${SETUP}" "$root" 3 --final-lgtm --completed
+  # 3 iters × ($0.02 + $0.18 + $0.04) = $0.72
+  local out; out=$(bash "${STATUS}" "$root" 2>&1 | strip_ansi)
+  local fail=""
+  grep -qE 'Total cost:[[:space:]]*\$0\.72' <<<"$out" || fail+="total cost not \$0.72 (got: $(grep -oE 'Total cost:[^$]*\$[0-9.]+' <<<"$out")); "
+  [[ -z "$fail" ]] && record T7 PASS || record T7 FAIL "$fail"
+  cleanup_root "$root"
+}
+
+# ---------- T8 — lgtm_count derived from verdicts when .completed exists ----------
+run_T8() {
+  local root; root=$(mkroot T8)
+  bash "${SETUP}" "$root" 2 --final-lgtm --completed
+  # .orch-state.json still shows lgtm_count=0 (simulates the bug);
+  # status.sh must derive count from final verdict=lgtm.
+  local out; out=$(bash "${STATUS}" "$root" 2>&1 | strip_ansi)
+  local fail=""
+  grep -qE 'LGTM count:[[:space:]]*1' <<<"$out" || fail+="lgtm count not 1; "
+  [[ -z "$fail" ]] && record T8 PASS || record T8 FAIL "$fail"
+  cleanup_root "$root"
+}
+
+# ---------- T9 — generated orchestrator persists state before stop_fleet on lgtm ----------
+run_T9() {
+  local launch="${SKILL_DIR}/scripts/launch.sh"
+  [[ -f "$launch" ]] || { record T9 FAIL "missing launch.sh"; return; }
+  # Extract the lgtm branch and check ordering: state-write must appear before stop_fleet.
+  local block
+  block=$(awk '/lgtm\)/,/;;/' "$launch" | head -20)
+  local write_line stop_line
+  write_line=$(grep -n 'ORCH_STATE\|orch-state' <<<"$block" | head -1 | cut -d: -f1)
+  stop_line=$(grep -n 'stop_fleet' <<<"$block" | head -1 | cut -d: -f1)
+  local fail=""
+  if [[ -z "$write_line" ]]; then
+    fail+="no state-write in lgtm branch; "
+  elif [[ -z "$stop_line" ]]; then
+    fail+="no stop_fleet in lgtm branch; "
+  elif (( write_line > stop_line )); then
+    fail+="state-write (line $write_line) after stop_fleet (line $stop_line); "
+  fi
+  # stop_fleet helper must write .completed marker (search multi-line).
+  awk '/^stop_fleet\(\)/,/^}/' "$launch" | grep -q '\.completed' \
+    || fail+="stop_fleet helper does not write .completed; "
+  [[ -z "$fail" ]] && record T9 PASS || record T9 FAIL "$fail"
+}
+
 chmod +x "${SETUP}"
-for t in T1 T2 T3 T4 T5; do run_$t; done
+for t in T1 T2 T3 T4 T5 T6 T7 T8 T9; do run_$t; done
 
 echo
 echo "Passed: ${#PASS[@]}"

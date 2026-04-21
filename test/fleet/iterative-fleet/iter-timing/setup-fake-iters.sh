@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup-fake-iters.sh ROOT ITERS [--in-progress]
+# setup-fake-iters.sh ROOT ITERS [--in-progress] [--final-lgtm] [--completed]
 #
 # Populate a fake iterative-fleet tree under ROOT with ITERS completed
 # iterations. Each completed iter has iterations/{N}/workers/{a,b,c}/session.jsonl
@@ -8,12 +8,23 @@
 #
 # --in-progress : also create workers/{a,b,c}/session.jsonl for an in-progress
 #                 iter (ITERS+1) — mimics mid-iteration state.
+# --final-lgtm  : last iteration's review.md uses verdict=lgtm instead of iterate.
+# --completed   : write .completed marker (stop_fleet ran cleanly).
 set -euo pipefail
 
-ROOT="${1:?usage: setup-fake-iters.sh ROOT ITERS [--in-progress]}"
-ITERS="${2:?usage: setup-fake-iters.sh ROOT ITERS [--in-progress]}"
+ROOT="${1:?usage: setup-fake-iters.sh ROOT ITERS [flags...]}"
+ITERS="${2:?usage: setup-fake-iters.sh ROOT ITERS [flags...]}"
 IN_PROGRESS=0
-[[ "${3:-}" == "--in-progress" ]] && IN_PROGRESS=1
+FINAL_LGTM=0
+COMPLETED=0
+shift 2
+for flag in "$@"; do
+  case "$flag" in
+    --in-progress) IN_PROGRESS=1 ;;
+    --final-lgtm)  FINAL_LGTM=1 ;;
+    --completed)   COMPLETED=1 ;;
+  esac
+done
 
 mkdir -p "${ROOT}"
 cat >"${ROOT}/fleet.json" <<'JSON'
@@ -54,7 +65,11 @@ while (( n <= ITERS )); do
   printf '{"type":"turn.started"}\n{"type":"result","subtype":"success","total_cost_usd":0.04}\n' \
     >"${iter_dir}/workers/reviewer/session.jsonl"
   # verdict
-  echo "verdict: iterate" >"${iter_dir}/review.md"
+  if (( FINAL_LGTM == 1 && n == ITERS )); then
+    echo "verdict: lgtm" >"${iter_dir}/review.md"
+  else
+    echo "verdict: iterate" >"${iter_dir}/review.md"
+  fi
   # offset mtimes so iter N has a distinct "duration" (N*60s span)
   # birth (ctime) = base, mtime = base + span
   base_ts=$(( 1713600000 + (n - 1) * 600 ))
@@ -69,4 +84,8 @@ done
 if (( IN_PROGRESS == 1 )); then
   printf '{"type":"turn.started"}\n' >"${ROOT}/workers/tests/session.jsonl"
   printf '{"type":"turn.started"}\n' >"${ROOT}/workers/impl/session.jsonl"
+fi
+
+if (( COMPLETED == 1 )); then
+  echo "reviewer approved — work is done" >"${ROOT}/.completed"
 fi

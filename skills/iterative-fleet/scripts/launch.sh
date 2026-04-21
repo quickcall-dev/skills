@@ -217,7 +217,12 @@ NC='\033[0m'
 log() { echo -e "\${CYAN}[orchestrator]\${NC} \$(date -u +%H:%M:%S) \$*"; }
 warn() { echo -e "\${YELLOW}[orchestrator]\${NC} \$(date -u +%H:%M:%S) \$*"; }
 success() { echo -e "\${GREEN}[orchestrator]\${NC} \$(date -u +%H:%M:%S) \$*"; }
-stop_fleet() { echo -e "\${BOLD}\${GREEN}[orchestrator]\${NC} STOP: \$*"; exit 0; }
+stop_fleet() {
+  echo -e "\${BOLD}\${GREEN}[orchestrator]\${NC} STOP: \$*"
+  printf '{"current_iteration":%d,"lgtm_count":%d,"reason":"%s"}\n' "\${iter:-0}" "\${lgtm_count:-0}" "\$*" > "\${ORCH_STATE}" 2>/dev/null || true
+  echo "\$*" > "\${FLEET_ROOT}/.completed"
+  exit 0
+}
 
 # Source shared DAG library
 source "${LIB_DIR}/dag.sh"
@@ -595,6 +600,7 @@ while true; do
       lgtm)
         lgtm_count=\$((lgtm_count + 1))
         success "LGTM (\${lgtm_count}/\${REVIEWER_LGTM_COUNT})"
+        printf '{"current_iteration":%d,"lgtm_count":%d}\n' "\${iter}" "\${lgtm_count}" > "\${ORCH_STATE}"
         if [[ "\${lgtm_count}" -ge "\${REVIEWER_LGTM_COUNT}" ]]; then
           stop_fleet "reviewer approved \${lgtm_count} times — work is done!"
         fi
