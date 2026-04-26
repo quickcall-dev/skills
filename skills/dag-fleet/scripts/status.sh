@@ -176,6 +176,38 @@ print(f'{c:.2f}')
         status="FAILED"
         failed=$((failed + 1))
         cost="0"
+      elif [[ "$last_type" == "message" ]]; then
+        # Pi terminal or running event
+        local role stop_reason
+        role=$(tail -1 "$log" 2>/dev/null | jq -r '.message.role // empty' 2>/dev/null || echo "")
+        stop_reason=$(tail -1 "$log" 2>/dev/null | jq -r '.message.stopReason // empty' 2>/dev/null || echo "")
+        if [[ "$role" == "assistant" && "$stop_reason" == "stop" ]]; then
+          status="DONE"
+          done_count=$((done_count + 1))
+          # Extract cost (may be 0 for kimi — estimate from tokens)
+          cost=$(tail -1 "$log" 2>/dev/null | python3 -c "
+import sys, json
+line = sys.stdin.readline().strip()
+if not line: print('0'); sys.exit()
+ev = json.loads(line)
+u = ev.get('message', {}).get('usage', {})
+cost_val = u.get('cost', {}).get('total', 0)
+if cost_val and float(cost_val) > 0:
+    print(f'{float(cost_val):.2f}')
+    sys.exit()
+inp = u.get('input', 0)
+outp = u.get('output', 0)
+cache = u.get('cacheRead', 0)
+c = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
+print(f'{c:.2f}')
+" 2>/dev/null || echo "0")
+        elif [[ "$role" == "assistant" && "$stop_reason" == "toolUse" ]]; then
+          status="RUNNING"
+          running=$((running + 1))
+        else
+          status="RUNNING"
+          running=$((running + 1))
+        fi
       else
         status="RUNNING"
         running=$((running + 1))
@@ -235,6 +267,13 @@ try:
                 u = ev.get("usage") or {}
                 inp += int(u.get("input_tokens") or 0)
                 outp += int(u.get("output_tokens") or 0)
+            # Pi: message events with usage
+            elif ev.get("type") == "message":
+                msg = ev.get("message") or {}
+                if msg.get("role") == "assistant":
+                    u = msg.get("usage") or {}
+                    inp += int(u.get("input") or 0)
+                    outp += int(u.get("output") or 0)
 except Exception:
     pass
 cost = (inp * in_p + outp * out_p) / 1_000_000.0
@@ -359,6 +398,26 @@ for line in sys.stdin:
         else:
             continue
         break
+    # Pi message events
+    if t == "message":
+        msg = ev.get("message") or {}
+        role = msg.get("role", "")
+        if role == "assistant":
+            for c in (msg.get("content") or []):
+                if c.get("type") == "text" and c.get("text", "").strip():
+                    txt = c["text"].strip().replace("\n", " ")
+                    print(txt)
+                    break
+                if c.get("type") == "toolCall":
+                    name = c.get("name", "?")
+                    print(f"🔧 {name}")
+                    break
+            else:
+                continue
+            break
+        elif role == "toolResult":
+            print("📤 tool result")
+            break
     # Codex item events (agent_message, command_execution, web_search)
     if t == "item.completed":
         item = ev.get("item") or {}
@@ -406,7 +465,13 @@ for line in sys.stdin:
       if [[ "$OPT_VERBOSE" == "true" && -f "$log" ]]; then
         local v_lines v_tail v_outs
         v_lines=$(wc -l <"$log" 2>/dev/null | tr -d '[:space:]')
-        v_tail=$(tail -1 "$log" 2>/dev/null | jq -r '"\(.type)/\(.subtype // "-")"' 2>/dev/null || echo "?")
+        v_tail=$(tail -1 "$log" 2>/dev/null | jq -r '
+          if .type == "message" then
+            "message/\(.message.role // "-")/\(.message.stopReason // "-")"
+          else
+            "\(.type)/\(.subtype // "-")"
+          end
+        ' 2>/dev/null || echo "?")
         v_outs=$(ls "${worker_dir}/output/" 2>/dev/null | tr '\n' ' ' | sed 's/ *$//')
         [[ -z "$v_outs" ]] && v_outs="(none)"
         printf "${GRAY}    ↳ lines=%s  tail=%s  outputs=%s${NC}\n" "$v_lines" "$v_tail" "$v_outs"

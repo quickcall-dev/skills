@@ -133,6 +133,8 @@ done
 if [[ "${DRY_RUN}" -eq 0 ]]; then
   if [[ "${DEFAULT_PROVIDER}" == "codex" ]]; then
     command -v codex &>/dev/null || die "codex CLI is required but not found in PATH"
+  elif [[ "${DEFAULT_PROVIDER}" == "pi" ]]; then
+    command -v pi &>/dev/null || die "pi CLI is required but not found in PATH"
   else
     command -v claude &>/dev/null || die "claude CLI is required but not found in PATH"
   fi
@@ -319,7 +321,7 @@ for i in $(seq 0 $((WORKER_COUNT - 1))); do
   MAX_TURNS=$(jq -r ".workers[${i}].max_turns // 0" "${FLEET_JSON}")
 
   # Worktree workers always need Bash for git commit — override restrictive types (claude only)
-  if [[ "${WORKER_PROVIDER}" != "codex" ]]; then
+  if [[ "${WORKER_PROVIDER}" != "codex" && "${WORKER_PROVIDER}" != "pi" ]]; then
     if [[ "${WORKER_TYPE}" == "read-only" || "${WORKER_TYPE}" == "write" || "${WORKER_TYPE}" == "reviewer" ]]; then
       warn "Worker '${WORKER_ID}' type '${WORKER_TYPE}' disallows Bash — overriding to 'code-run' (worktree workers need git)"
       WORKER_TYPE="code-run"
@@ -341,7 +343,13 @@ for i in $(seq 0 $((WORKER_COUNT - 1))); do
   fi
 
   # Build INNER_CMD via shared helper
-  DISALLOWED_TOOLS=$(get_disallowed_tools "${WORKER_TYPE}")
+  PI_TOOLS=""
+  if [[ "${WORKER_PROVIDER}" == "pi" ]]; then
+    PI_TOOLS=$(get_pi_tools "${WORKER_TYPE}")
+    DISALLOWED_TOOLS=""
+  else
+    DISALLOWED_TOOLS=$(get_disallowed_tools "${WORKER_TYPE}")
+  fi
   CODEX_SANDBOX=$(get_codex_sandbox "${WORKER_TYPE}")
   CODEX_EXTRA=$(get_codex_extra_flags "${WORKER_TYPE}")
   SESSION_NAME="worktree-${FLEET_NAME}-${WORKER_ID}"
@@ -359,7 +367,7 @@ for i in $(seq 0 $((WORKER_COUNT - 1))); do
     --disallowed-tools "${DISALLOWED_TOOLS}" \
     --session-jsonl "${WORKER_SESSION_JSONL}" \
     --worker-dir "${WORKER_DIR}" \
-    --extra-exports "WORKER_BRANCH='${WORKER_BRANCH}'" \
+    --extra-exports "WORKER_BRANCH='${WORKER_BRANCH}' PI_TOOLS=${PI_TOOLS}" \
     --provider "${WORKER_PROVIDER}" \
     --reasoning-effort "${WORKER_REASONING_EFFORT}" \
     --codex-sandbox "${CODEX_SANDBOX}" \

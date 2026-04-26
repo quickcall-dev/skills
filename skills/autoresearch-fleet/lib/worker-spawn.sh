@@ -30,9 +30,9 @@
 # Validate that a value is safe for shell interpolation (alphanumeric, hyphens, underscores, dots)
 validate_safe_id() {
   local label="$1" value="$2"
-  if [[ ! "$value" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+  if [[ ! "$value" =~ ^[a-zA-Z0-9._/-]+$ ]]; then
     echo "FATAL: ${label} contains unsafe characters: '${value}'" >&2
-    echo "  Only alphanumeric, hyphens, underscores, and dots are allowed." >&2
+    echo "  Only alphanumeric, hyphens, underscores, dots, and slashes are allowed." >&2
     return 1
   fi
 }
@@ -87,6 +87,8 @@ build_inner_cmd() {
 
   if [[ "${provider}" == "codex" ]]; then
     _build_codex_cmd
+  elif [[ "${provider}" == "pi" ]]; then
+    _build_pi_cmd
   else
     _build_claude_cmd
   fi
@@ -111,13 +113,73 @@ _build_claude_cmd() {
   fi
   cmd+=" --max-budget-usd ${max_budget}"
   cmd+=" --name '${session_name}'"
-  if [[ -n "${reasoning_effort}" ]]; then
-    cmd+=" --effort '${reasoning_effort}'"
-  fi
   if [[ -n "${disallowed_tools}" ]]; then
     cmd+=" --disallowed-tools '${disallowed_tools}'"
   fi
   cmd+=" 2>&1 | tee '${session_jsonl}'"
+}
+
+# ---------------------------------------------------------------------------
+# Pi provider: cat prompt | pi -p --mode json --model X ...
+# ---------------------------------------------------------------------------
+_build_pi_cmd() {
+  # Pass through EMIT_TOOL_USE for fake-pi test shim
+  cmd+=" && export EMIT_TOOL_USE='${EMIT_TOOL_USE:-0}'"
+
+  cmd+=" && cat '${worker_prompt}' | pi -p"
+  cmd+=" --mode json"
+  cmd+=" --model '${worker_model}'"
+
+  # Pi uses --tools (allowlist), not --disallowed-tools (blocklist)
+  # Prefer explicit PI_TOOLS from launch.sh, else build from disallowed blocklist
+  local allowlist="${PI_TOOLS:-}"
+  if [[ -z "$allowlist" && -n "${disallowed_tools}" ]]; then
+    allowlist=$(_build_pi_allowlist "${disallowed_tools}")
+  fi
+  if [[ -n "$allowlist" ]]; then
+    cmd+=" --tools '${allowlist}'"
+  fi
+
+  # Map reasoning effort → pi thinking level
+  if [[ -n "${reasoning_effort}" ]]; then
+    local pi_thinking
+    pi_thinking=$(_map_reasoning_to_thinking "${reasoning_effort}")
+    cmd+=" --thinking '${pi_thinking}'"
+  fi
+
+  # Session management: use per-worker session dir for deterministic paths
+  cmd+=" --session-dir '${worker_dir}/.pi-sessions'"
+
+  # No --max-budget-usd in Pi. Budget enforcement is external.
+  # Symlink the generated session file to our expected path.
+  cmd+=" && ln -sf '${worker_dir}/.pi-sessions/'*.jsonl '${session_jsonl}'"
+}
+
+_build_pi_allowlist() {
+  local disallowed="$1"
+  local all_tools="read,bash,edit,write,grep,find,ls"
+  # Normalize disallowed to lowercase, comma-separated
+  local blocked
+  blocked=$(echo "$disallowed" | tr '[:upper:]' '[:lower:]' | tr -d ' ' | tr ',' '\n')
+  # Filter all_tools
+  local allowlist=""
+  IFS=',' read -ra tools_arr <<< "$all_tools"
+  for t in "${tools_arr[@]}"; do
+    if ! echo "$blocked" | grep -Fxq "$t"; then
+      [[ -n "$allowlist" ]] && allowlist+=","
+      allowlist+="$t"
+    fi
+  done
+  echo "$allowlist"
+}
+
+_map_reasoning_to_thinking() {
+  case "$1" in
+    low)    echo "low" ;;
+    medium) echo "medium" ;;
+    high)   echo "high" ;;
+    *)      echo "medium" ;;
+  esac
 }
 
 # ---------------------------------------------------------------------------

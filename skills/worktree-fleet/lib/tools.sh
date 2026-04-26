@@ -24,6 +24,26 @@ get_disallowed_tools() {
 }
 
 # ---------------------------------------------------------------------------
+# Pi: --tools allowlist per worker type
+#   (inverse of claude's --disallowed-tools)
+# ---------------------------------------------------------------------------
+get_pi_tools() {
+  local worker_type="$1"
+  case "${worker_type}" in
+    read-only)    echo "read,grep,find,ls" ;;
+    write)        echo "read,edit,write,grep,find,ls" ;;
+    code-run)     echo "read,bash,edit,write,grep,find,ls" ;;
+    research)     echo "read,bash,grep,find,ls" ;;
+    reviewer)     echo "read,edit,write,grep,find,ls" ;;
+    orchestrator) echo "read,bash,grep,find,ls" ;;
+    *)
+      warn "Unknown worker type '${worker_type}', using read-only Pi tools"
+      echo "read,grep,find,ls"
+      ;;
+  esac
+}
+
+# ---------------------------------------------------------------------------
 # Codex: sandbox mode per worker type
 #   read-only         = can read files, no shell writes
 #   workspace-write   = can read/write files + run shell in workspace

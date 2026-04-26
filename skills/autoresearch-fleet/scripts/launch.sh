@@ -124,6 +124,8 @@ fi
 if [[ "${DRY_RUN}" -eq 0 ]]; then
   if [[ "${PROVIDER}" == "codex" ]]; then
     command -v codex &>/dev/null || die "codex CLI not found"
+  elif [[ "${PROVIDER}" == "pi" ]]; then
+    command -v pi &>/dev/null || die "pi CLI not found"
   else
     command -v claude &>/dev/null || die "claude CLI not found"
   fi
@@ -218,6 +220,24 @@ _read_session_cost() {
   if grep -q '"type":"result"' "${jsonl}" 2>/dev/null; then
     grep '"type":"result"' "${jsonl}" 2>/dev/null | tail -1 | \
       jq -r '.total_cost_usd // 0' 2>/dev/null || echo "0"
+  elif tail -1 "${jsonl}" 2>/dev/null | jq -e '.type == \"message\" and .message.role == \"assistant\" and .message.stopReason == \"stop\"' >/dev/null 2>&1; then
+    # Pi: cost may be 0 for kimi — estimate from tokens
+    tail -1 "${jsonl}" 2>/dev/null | python3 -c "
+import sys, json
+line = sys.stdin.readline().strip()
+if not line: print('0'); sys.exit()
+ev = json.loads(line)
+u = ev.get('message', {}).get('usage', {})
+cost_val = u.get('cost', {}).get('total', 0)
+if cost_val and float(cost_val) > 0:
+    print(f'{float(cost_val):.6f}')
+    sys.exit()
+inp = u.get('input', 0)
+outp = u.get('output', 0)
+cache = u.get('cacheRead', 0)
+c = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
+print(f'{c:.6f}')
+" 2>/dev/null || echo "0"
   else
     # Sum usage from assistant messages (estimate from token counts)
     python3 -c "
@@ -397,6 +417,10 @@ while true; do
   codex_extra=""
   [[ "${is_search}" == "true" ]] && codex_extra="-c 'web_search=\"live\"'"
 
+  # Pi tool allowlist (all built-ins + search if needed)
+  PI_TOOLS="read,bash,edit,write,grep,find,ls"
+  [[ "${is_search}" == "true" ]] && PI_TOOLS="read,bash,edit,write,grep,find,ls,web_search"
+
   # Build command via shared lib/worker-spawn.sh
   log "Spawning ${PROVIDER} agent (model=${MODEL}, budget=\$${BUDGET_PER_ITER})..."
 
@@ -416,10 +440,12 @@ while true; do
     --provider "${PROVIDER}" \
     --codex-sandbox "workspace-write" \
     --codex-extra-flags "${codex_extra}" \
+    --extra-exports "PI_TOOLS=${PI_TOOLS}" \
   )
 
   # For search mode with claude provider, inject --tools default (enables WebSearch)
-  if [[ "${is_search}" == "true" && "${PROVIDER}" != "codex" ]]; then
+  # For Pi provider, build_inner_cmd already handles --tools via PI_TOOLS
+  if [[ "${is_search}" == "true" && "${PROVIDER}" == "claude" ]]; then
     AGENT_CMD=$(echo "${AGENT_CMD}" | sed 's/claude -p/claude -p --tools default/')
   fi
 

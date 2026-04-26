@@ -1,0 +1,17 @@
+{
+  "fleet_name": "fleet-test-cycle-pi",
+  "fleet_id": "fleet-test-cycle-pi",
+  "status": "pending",
+  "config": {
+    "max_concurrent": 4,
+    "provider": "pi",
+    "model": "kimi-coding/kimi-k2-thinking",
+    "fallback_model": "kimi-coding/kimi-k2-thinking",
+    "launch_delay_seconds": 0,
+    "max_budget_fleet": 0
+  },
+  "workers": [
+    { "id": "a", "type": "code-run", "task": "a", "max_turns": 2, "max_budget_usd": 0.05, "depends_on": ["b"] },
+    { "id": "b", "type": "code-run", "task": "b", "max_turns": 2, "max_budget_usd": 0.05, "depends_on": ["a"] }
+  ]
+}

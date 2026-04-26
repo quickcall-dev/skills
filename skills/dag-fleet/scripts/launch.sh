@@ -178,6 +178,8 @@ done
 # Validate required CLI tools based on provider
 if [[ "${DEFAULT_PROVIDER}" == "codex" ]]; then
   command -v codex &>/dev/null || die "codex CLI is required but not found in PATH"
+elif [[ "${DEFAULT_PROVIDER}" == "pi" ]]; then
+  command -v pi &>/dev/null || die "pi CLI is required but not found in PATH"
 else
   command -v claude &>/dev/null || die "claude CLI is required but not found in PATH"
 fi
@@ -313,7 +315,16 @@ has_terminal_event() {
   local jsonl="$1"
   local last_type
   last_type=$(tail -1 "${jsonl}" 2>/dev/null | jq -r '.type' 2>/dev/null || echo "")
-  [[ "${last_type}" == "result" || "${last_type}" == "turn.completed" || "${last_type}" == "turn.failed" ]]
+  # Claude / Codex terminal events
+  [[ "${last_type}" == "result" || "${last_type}" == "turn.completed" || "${last_type}" == "turn.failed" ]] && return 0
+  # Pi: assistant message with stopReason == "stop"
+  if [[ "${last_type}" == "message" ]]; then
+    local role stop_reason
+    role=$(tail -1 "${jsonl}" 2>/dev/null | jq -r '.message.role // empty' 2>/dev/null || echo "")
+    stop_reason=$(tail -1 "${jsonl}" 2>/dev/null | jq -r '.message.stopReason // empty' 2>/dev/null || echo "")
+    [[ "${role}" == "assistant" && "${stop_reason}" == "stop" ]] && return 0
+  fi
+  return 1
 }
 
 # ---------------------------------------------------------------------------
@@ -379,6 +390,27 @@ inp = u.get('input_tokens', 0)
 outp = u.get('output_tokens', 0)
 # Conservative estimate for codex models
 c = (inp * 2.0 + outp * 8.0) / 1_000_000.0
+print(f'{c:.6f}')
+" 2>/dev/null || echo "0")
+    elif tail -1 "${jsonl}" 2>/dev/null | jq -e '.type == \"message\" and .message.role == \"assistant\" and .message.stopReason == \"stop\"' >/dev/null 2>&1; then
+      # Pi: cost may be 0 for some providers (kimi). Extract tokens and estimate.
+      cost=$(tail -1 "${jsonl}" 2>/dev/null | python3 -c "
+import sys, json
+line = sys.stdin.readline().strip()
+if not line: print('0'); sys.exit()
+ev = json.loads(line)
+u = ev.get('message', {}).get('usage', {})
+# Try explicit cost first (anthropic provider)
+cost_val = u.get('cost', {}).get('total', 0)
+if cost_val and float(cost_val) > 0:
+    print(f'{float(cost_val):.6f}')
+    sys.exit()
+# Fallback: estimate from tokens (kimi provider)
+inp = u.get('input', 0)
+outp = u.get('output', 0)
+cache = u.get('cacheRead', 0)
+# Kimi pricing: $3/M input, $15/M output, $0.30/M cache read
+c = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
 print(f'{c:.6f}')
 " 2>/dev/null || echo "0")
     fi
@@ -541,7 +573,13 @@ EOF
   check_fleet_budget || break
 
   # Build tool restrictions (provider-specific)
-  DISALLOWED_TOOLS=$(get_disallowed_tools "${WORKER_TYPE}")
+  PI_TOOLS=""
+  if [[ "${WORKER_PROVIDER}" == "pi" ]]; then
+    PI_TOOLS=$(get_pi_tools "${WORKER_TYPE}")
+    DISALLOWED_TOOLS=""
+  else
+    DISALLOWED_TOOLS=$(get_disallowed_tools "${WORKER_TYPE}")
+  fi
   CODEX_SANDBOX=$(get_codex_sandbox "${WORKER_TYPE}")
   CODEX_EXTRA=$(get_codex_extra_flags "${WORKER_TYPE}")
 
@@ -568,6 +606,7 @@ EOF
     --reasoning-effort "${WORKER_REASONING_EFFORT}" \
     --codex-sandbox "${CODEX_SANDBOX}" \
     --codex-extra-flags "${CODEX_EXTRA}" \
+    --extra-exports "PI_TOOLS=${PI_TOOLS}" \
   )
   if [[ "${KEEP_PANES_OPEN}" == "true" ]]; then
     INNER_CMD+="; read"
@@ -608,7 +647,11 @@ EOF
       echo "SKIP_WINDOW"
       exit 0
     fi
-    if [[ -s "${WORKER_SESSION_JSONL}" ]] && (grep -q '"type":"result"' "${WORKER_SESSION_JSONL}" 2>/dev/null || grep -q '"type":"turn.completed"' "${WORKER_SESSION_JSONL}" 2>/dev/null); then
+    if [[ -s "${WORKER_SESSION_JSONL}" ]] && (
+      grep -q '"type":"result"' "${WORKER_SESSION_JSONL}" 2>/dev/null ||
+      grep -q '"type":"turn.completed"' "${WORKER_SESSION_JSONL}" 2>/dev/null ||
+      grep -q '"stopReason":"stop"' "${WORKER_SESSION_JSONL}" 2>/dev/null
+    ); then
       echo "SKIP_RESULT"
       exit 0
     fi

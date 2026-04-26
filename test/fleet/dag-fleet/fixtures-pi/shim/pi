@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Fake `pi` shim for fleet-orchestrator fixture tests (pi provider).
+#
+# Mimics `pi -p --mode json --model X --tools Y --thinking Z --session-dir D`
+# just well enough for launch.sh/status.sh/feed.sh to be exercised end-to-end
+# without burning real API calls.
+#
+# Protocol:
+#   - Parses --model, --tools, --thinking, --session-dir
+#   - Uses $WORKER_ID (exported by launch.sh INNER_CMD) to locate the per-worker
+#     bash command at $FLEET_ROOT/.fake-tasks/$WORKER_ID.sh
+#   - Emits Pi-format JSONL events matching live capture from ~/.pi/agent/sessions/:
+#       {"type":"session",...}
+#       {"type":"model_change",...}
+#       {"type":"message","message":{"role":"assistant",...,"usage":{...},"stopReason":"stop"}}
+#   - Cost fields are all 0 (forces token-based estimation fallback)
+#   - Supports EMIT_TOOL_USE=1 env var for testing RUNNING state detection
+
+set -u
+
+MODEL="fake-pi-model"
+TOOLS=""
+THINKING="medium"
+SESSION_DIR=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -p|--print) shift ;;
+    --mode) shift 2 ;;  # json
+    --model) MODEL="$2"; shift 2 ;;
+    --tools|-t) TOOLS="$2"; shift 2 ;;
+    --thinking) THINKING="$2"; shift 2 ;;
+    --session-dir) SESSION_DIR="$2"; shift 2 ;;
+    --no-session|--no-tools|--no-builtin-tools) shift ;;
+    *) shift ;;
+  esac
+done
+
+# Drain stdin (the prompt is piped in)
+cat >/dev/null 2>&1 || true
+
+SESSION_ID="fake-pi-$(date +%s)-$$"
+TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+CWD="${PWD}"
+
+# Write session file if session-dir provided
+if [[ -n "$SESSION_DIR" ]]; then
+  mkdir -p "$SESSION_DIR"
+  SESSION_FILE="${SESSION_DIR}/${TS}_${SESSION_ID}.jsonl"
+  exec > >(tee "$SESSION_FILE")
+  exec 2>&1
+fi
+
+# session header
+printf '{"type":"session","version":3,"id":"%s","timestamp":"%s","cwd":"%s"}\n' \
+  "$SESSION_ID" "$TS" "$CWD"
+
+# model_change
+printf '{"type":"model_change","id":"mc1","parentId":null,"timestamp":"%s","provider":"fake-pi","modelId":"%s"}\n' \
+  "$TS" "$MODEL"
+
+# thinking_level_change
+printf '{"type":"thinking_level_change","id":"tlc1","parentId":"mc1","timestamp":"%s","thinkingLevel":"%s"}\n' \
+  "$TS" "$THINKING"
+
+# assistant message (initial)
+printf '{"type":"message","id":"msg1","parentId":"tlc1","timestamp":"%s","message":{"role":"assistant","content":[{"type":"text","text":"Starting task for worker %s"}],"api":"anthropic-messages","provider":"fake-pi","model":"%s","usage":{"input":100,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":100,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":null,"timestamp":%s}}\n' \
+  "$TS" "${WORKER_ID:-unknown}" "$MODEL" "$(date +%s)000"
+
+# Run the per-worker fake task, if one exists.
+TASK_SCRIPT=""
+if [[ -n "${FLEET_ROOT:-}" && -n "${WORKER_ID:-}" ]]; then
+  TASK_SCRIPT="${FLEET_ROOT}/.fake-tasks/${WORKER_ID}.sh"
+fi
+
+RC=0
+if [[ -n "$TASK_SCRIPT" && -f "$TASK_SCRIPT" ]]; then
+  bash "$TASK_SCRIPT" || RC=$?
+else
+  sleep 2
+fi
+
+TS2="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# Determine stopReason based on env var and task result
+STOP_REASON="stop"
+if [[ "${EMIT_TOOL_USE:-0}" == "1" ]]; then
+  STOP_REASON="toolUse"
+fi
+
+# assistant message (final) with usage and stopReason
+# Use large token counts so cost estimation produces non-zero value
+printf '{"type":"message","id":"msg2","parentId":"msg1","timestamp":"%s","message":{"role":"assistant","content":[{"type":"text","text":"Task complete for worker %s"}],"api":"anthropic-messages","provider":"fake-pi","model":"%s","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"%s","timestamp":%s}}\n' \
+  "$TS2" "${WORKER_ID:-unknown}" "$MODEL" "$STOP_REASON" "$(date +%s)000"
+
+exit 0

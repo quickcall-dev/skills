@@ -1,0 +1,18 @@
+{
+  "fleet_name": "fleet-test-completion-pi",
+  "fleet_id": "fleet-test-completion-pi",
+  "status": "pending",
+  "config": {
+    "max_concurrent": 4,
+    "provider": "pi",
+    "model": "kimi-coding/kimi-k2-thinking",
+    "fallback_model": "kimi-coding/kimi-k2-thinking",
+    "launch_delay_seconds": 0,
+    "max_budget_fleet": 0
+  },
+  "workers": [
+    { "id": "w1", "type": "code-run", "task": "w1", "max_turns": 2, "max_budget_usd": 0.05 },
+    { "id": "w2", "type": "code-run", "task": "w2", "max_turns": 2, "max_budget_usd": 0.05 },
+    { "id": "w3", "type": "code-run", "task": "w3", "max_turns": 2, "max_budget_usd": 0.05 }
+  ]
+}

@@ -123,6 +123,8 @@ done
 if [[ "${DRY_RUN}" -eq 0 ]]; then
   if [[ "${DEFAULT_PROVIDER}" == "codex" ]]; then
     command -v codex &>/dev/null || die "codex CLI is required but not found in PATH"
+  elif [[ "${DEFAULT_PROVIDER}" == "pi" ]]; then
+    command -v pi &>/dev/null || die "pi CLI is required but not found in PATH"
   else
     command -v claude &>/dev/null || die "claude CLI is required but not found in PATH"
   fi
@@ -243,6 +245,23 @@ u = ev.get('usage', {})
 inp = u.get('input_tokens', 0)
 outp = u.get('output_tokens', 0)
 c = (inp * 2.0 + outp * 8.0) / 1_000_000.0
+print(f'{c:.6f}')
+" 2>/dev/null || echo "0"
+  elif tail -1 "\${jsonl}" 2>/dev/null | jq -e '.type == \"message\" and .message.role == \"assistant\" and .message.stopReason == \"stop\"' >/dev/null 2>&1; then
+    tail -1 "\${jsonl}" 2>/dev/null | python3 -c "
+import sys, json
+line = sys.stdin.readline().strip()
+if not line: print('0'); sys.exit()
+ev = json.loads(line)
+u = ev.get('message', {}).get('usage', {})
+cost_val = u.get('cost', {}).get('total', 0)
+if cost_val and float(cost_val) > 0:
+    print(f'{float(cost_val):.6f}')
+    sys.exit()
+inp = u.get('input', 0)
+outp = u.get('output', 0)
+cache = u.get('cacheRead', 0)
+c = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
 print(f'{c:.6f}')
 " 2>/dev/null || echo "0"
   else
@@ -708,7 +727,13 @@ while IFS= read -r WORKER_ID; do
     continue
   fi
 
-  DISALLOWED_TOOLS=$(get_disallowed_tools "${WORKER_TYPE}")
+  PI_TOOLS=""
+  if [[ "${WORKER_PROVIDER}" == "pi" ]]; then
+    PI_TOOLS=$(get_pi_tools "${WORKER_TYPE}")
+    DISALLOWED_TOOLS=""
+  else
+    DISALLOWED_TOOLS=$(get_disallowed_tools "${WORKER_TYPE}")
+  fi
   CODEX_SANDBOX=$(jq -r ".workers[] | select(.id == \"${WORKER_ID}\") | .sandbox // \"\"" "${FLEET_JSON}")
   if [[ -z "${CODEX_SANDBOX}" || "${CODEX_SANDBOX}" == "null" ]]; then
     CODEX_SANDBOX=$(get_codex_sandbox "${WORKER_TYPE}")
@@ -733,6 +758,7 @@ while IFS= read -r WORKER_ID; do
     --reasoning-effort "${WORKER_REASONING_EFFORT}" \
     --codex-sandbox "${CODEX_SANDBOX}" \
     --codex-extra-flags "${CODEX_EXTRA}" \
+    --extra-exports "PI_TOOLS=${PI_TOOLS}" \
   )
   INNER_CMD+=" && touch '${WORKER_DIR}/.done' || touch '${WORKER_DIR}/.failed'"
   INNER_CMD+="; sleep 30"

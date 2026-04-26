@@ -21,7 +21,7 @@ die()     { error "$*"; exit 1; }
 # Input validation — reject values that could break shell interpolation
 validate_fleet_id() {
   local label="$1" value="$2"
-  if [[ ! "$value" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-    die "${label} contains unsafe characters: '${value}' — only [a-zA-Z0-9._-] allowed"
+  if [[ ! "$value" =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+    die "${label} contains unsafe characters: '${value}' — only [a-zA-Z0-9._/-] allowed"
   fi
 }
