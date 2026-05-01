@@ -1,5 +1,10 @@
 # npx skills add creates these (project-level install artifacts)
 .agents/
 .claude/
+.codex/
 skills-lock.json
 docs/
+
+# Dev harness artifacts
+pi-dev-harness-experiment.html
+pi-dev-harness.tar.gz
