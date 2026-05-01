@@ -46,6 +46,28 @@ done
 [[ ! -d "${FLEET_ROOT}" ]] && { echo "Error: ${FLEET_ROOT} does not exist" >&2; exit 1; }
 FLEET_JSON="${FLEET_ROOT}/fleet.json"
 
+# Resolve the log file for a worker.
+# Pi workers write to .pi-sessions/*.jsonl while running; the session.jsonl
+# symlink is only created after pi exits. For monitoring running workers we
+# must fall back to the raw pi session file.
+_resolve_log() {
+  local wid="$1"
+  local session_jsonl="${FLEET_ROOT}/workers/${wid}/session.jsonl"
+  if [[ -f "$session_jsonl" && -s "$session_jsonl" ]]; then
+    echo "$session_jsonl"
+    return
+  fi
+  local pi_sessions="${FLEET_ROOT}/workers/${wid}/.pi-sessions"
+  if [[ -d "$pi_sessions" ]]; then
+    local newest
+    newest=$(ls -t "$pi_sessions"/*.jsonl 2>/dev/null | head -1)
+    if [[ -n "$newest" && -f "$newest" ]]; then
+      echo "$newest"
+      return
+    fi
+  fi
+}
+
 show_status() {
   local now
   now=$(date +%s)
@@ -141,10 +163,11 @@ show_status() {
   fi
 
   for wid in "${worker_ids[@]}"; do
-    local log="${FLEET_ROOT}/workers/${wid}/session.jsonl"
+    local log
+    log=$(_resolve_log "$wid")
     local status="PENDING" cost="0" ago_str="n/a" last_msg="—" elapsed_str="—"
 
-    if [[ -f "$log" && -s "$log" ]]; then
+    if [[ -n "$log" && -f "$log" && -s "$log" ]]; then
       # Compute total elapsed time (file birth → last modified)
       local ctime mtime
       ctime=$(stat -c %W "$log" 2>/dev/null || echo "0")
@@ -186,6 +209,26 @@ print(f'{c:.2f}')
 " 2>/dev/null || echo "0")
       elif [[ "$last_type" == "turn.failed" ]]; then
         status="FAILED"; cost="0"
+      elif [[ "$last_type" == "message" ]]; then
+        # Pi terminal or running event
+        local role stop_reason
+        role=$(tail -1 "$log" 2>/dev/null | jq -r '.message.role // empty' 2>/dev/null || echo "")
+        stop_reason=$(tail -1 "$log" 2>/dev/null | jq -r '.message.stopReason // empty' 2>/dev/null || echo "")
+        if [[ "$role" == "assistant" && "$stop_reason" == "stop" ]]; then
+          status="DONE"
+          cost=$(tail -1 "$log" 2>/dev/null | python3 -c "
+import sys, json
+ev = json.loads(sys.stdin.readline())
+u = ev.get('message', {}).get('usage', {})
+inp = u.get('input', 0)
+outp = u.get('output', 0)
+cache = u.get('cacheRead', 0)
+c = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
+print(f'{c:.2f}')
+" 2>/dev/null || echo "0")
+        else
+          status="RUNNING"
+        fi
       else
         status="RUNNING"
       fi

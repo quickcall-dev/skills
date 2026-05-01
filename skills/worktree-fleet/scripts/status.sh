@@ -48,6 +48,28 @@ done
 [[ ! -d "${FLEET_ROOT}" ]] && { echo "Error: ${FLEET_ROOT} does not exist"; exit 1; }
 FLEET_JSON="${FLEET_ROOT}/fleet.json"
 
+# Resolve the log file for a worker.
+# Pi workers write to .pi-sessions/*.jsonl while running; the session.jsonl
+# symlink is only created after pi exits. For monitoring running workers we
+# must fall back to the raw pi session file.
+_resolve_log() {
+  local wid="$1"
+  local session_jsonl="${FLEET_ROOT}/workers/${wid}/session.jsonl"
+  if [[ -f "$session_jsonl" && -s "$session_jsonl" ]]; then
+    echo "$session_jsonl"
+    return
+  fi
+  local pi_sessions="${FLEET_ROOT}/workers/${wid}/.pi-sessions"
+  if [[ -d "$pi_sessions" ]]; then
+    local newest
+    newest=$(ls -t "$pi_sessions"/*.jsonl 2>/dev/null | head -1)
+    if [[ -n "$newest" && -f "$newest" ]]; then
+      echo "$newest"
+      return
+    fi
+  fi
+}
+
 show_status() {
   local now
   now=$(date +%s)
@@ -117,7 +139,8 @@ show_status() {
   local first_json=true
   for wid in "${worker_ids[@]}"; do
     total=$((total + 1))
-    local log="${FLEET_ROOT}/workers/${wid}/session.jsonl"
+    local log
+    log=$(_resolve_log "$wid")
     local status_file="${FLEET_ROOT}/workers/${wid}/status.json"
     local status="PENDING" branch="?" cost="0" ago_str="n/a"
 
@@ -130,7 +153,7 @@ show_status() {
       branch=$(jq -r '.branch // "?"' "${status_file}" 2>/dev/null || echo "?")
     fi
 
-    if [[ -f "${log}" && -s "${log}" ]]; then
+    if [[ -n "$log" && -f "$log" && -s "$log" ]]; then
       local last_type last_subtype
       last_type=$(tail -1 "${log}" 2>/dev/null | jq -r '.type // ""' 2>/dev/null || echo "")
       last_subtype=$(tail -1 "${log}" 2>/dev/null | jq -r '.subtype // ""' 2>/dev/null || echo "")
@@ -156,6 +179,26 @@ print(f'{c:.2f}')
 " 2>/dev/null || echo "0")
       elif [[ "${last_type}" == "turn.failed" ]]; then
         status="FAILED"; failed=$((failed + 1)); cost="0"
+      elif [[ "${last_type}" == "message" ]]; then
+        # Pi terminal or running event
+        local role stop_reason
+        role=$(tail -1 "${log}" 2>/dev/null | jq -r '.message.role // empty' 2>/dev/null || echo "")
+        stop_reason=$(tail -1 "${log}" 2>/dev/null | jq -r '.message.stopReason // empty' 2>/dev/null || echo "")
+        if [[ "$role" == "assistant" && "$stop_reason" == "stop" ]]; then
+          status="DONE"; done_count=$((done_count + 1))
+          cost=$(tail -1 "${log}" 2>/dev/null | python3 -c "
+import sys, json
+ev = json.loads(sys.stdin.readline())
+u = ev.get('message', {}).get('usage', {})
+inp = u.get('input', 0)
+outp = u.get('output', 0)
+cache = u.get('cacheRead', 0)
+c = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
+print(f'{c:.2f}')
+" 2>/dev/null || echo "0")
+        else
+          status="RUNNING"; running=$((running + 1))
+        fi
       else
         status="RUNNING"; running=$((running + 1))
         # Estimate cost from streamed events (Claude + Codex)
@@ -209,8 +252,8 @@ PYEOF
 
     # Last message snippet
     local last_msg=""
-    if [[ -f "${log}" && -s "${log}" ]]; then
-      last_msg=$(tac "${log}" 2>/dev/null | python3 -c '
+    if [[ -n "$log" && -f "$log" && -s "$log" ]]; then
+      last_msg=$(tac "$log" 2>/dev/null | python3 -c '
 import sys, json
 for line in sys.stdin:
     line = line.strip()

@@ -102,7 +102,7 @@ run_P2() {
   local has_dis; has_dis=$(grep -r -- '--disallowed-tools' "$root/workers/" 2>/dev/null | wc -l)
   if [[ "$ro_tools" == "--tools 'read,grep,find,ls'" && \
         "$wr_tools" == "--tools 'read,edit,write,grep,find,ls'" && \
-        "$re_tools" == "--tools 'read,bash,grep,find,ls'" && \
+        "$re_tools" == "--tools 'read,bash,grep,find,ls,web_search,fetch_content,code_search,get_search_content'" && \
         "$rv_tools" == "--tools 'read,edit,write,grep,find,ls'" && \
         "$has_dis" == "0" ]]; then
     record "P2 pi-tool-allowlist" PASS
@@ -222,6 +222,50 @@ run_P7() {
 }
 
 # -------------------------------------------------------------------
+# Scenario P8 — Pi status.sh detects RUNNING via .pi-sessions fallback
+# (no session.jsonl symlink — simulates a worker still running)
+# -------------------------------------------------------------------
+run_P8() {
+  local root; root=$(mkroot pi-P8)
+  bash "${FIXTURES_DIR}/setup-fleet.sh" completion "$root" >/dev/null
+  mkdir -p "$root/workers/w1/.pi-sessions"
+  cat > "$root/workers/w1/.pi-sessions/2026-05-01T19-35-36-742Z_test.jsonl" <<'JSONL'
+{"type":"message","id":"msg1","timestamp":"2026-05-01T19:35:36Z","message":{"role":"assistant","content":[{"type":"text","text":"Starting task"}],"api":"anthropic-messages","provider":"kimi-coding","model":"k2p6","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"toolUse","timestamp":1777664324000}}
+JSONL
+  # No session.jsonl symlink — status.sh must find .pi-sessions/*.jsonl
+  local running; running=$(bash "${SCRIPTS}/status.sh" "$root" --json 2>/dev/null | jq '[.workers[] | select(.status == "RUNNING")] | length')
+  local cost; cost=$(bash "${SCRIPTS}/status.sh" "$root" --json 2>/dev/null | jq -r '.workers[0].cost')
+  if [[ "$running" == "1" && "$cost" != "0" && "$cost" != "null" ]]; then
+    record "P8 pi-sessions-running-fallback" PASS "(running=$running cost=$cost)"
+  else
+    record "P8 pi-sessions-running-fallback" FAIL "(running=$running cost=$cost)"
+  fi
+  cleanup_root "$root"
+}
+
+# -------------------------------------------------------------------
+# Scenario P9 — Pi status.sh detects DONE via .pi-sessions fallback
+# (no session.jsonl symlink — simulates a completed worker before ln -sf runs)
+# -------------------------------------------------------------------
+run_P9() {
+  local root; root=$(mkroot pi-P9)
+  bash "${FIXTURES_DIR}/setup-fleet.sh" completion "$root" >/dev/null
+  mkdir -p "$root/workers/w1/.pi-sessions"
+  cat > "$root/workers/w1/.pi-sessions/2026-05-01T19-35-36-742Z_test.jsonl" <<'JSONL'
+{"type":"message","id":"msg1","timestamp":"2026-05-01T19:35:36Z","message":{"role":"assistant","content":[{"type":"text","text":"Task complete"}],"api":"anthropic-messages","provider":"kimi-coding","model":"k2p6","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"stop","timestamp":1777664324000}}
+JSONL
+  # No session.jsonl symlink
+  local done_count; done_count=$(bash "${SCRIPTS}/status.sh" "$root" --json 2>/dev/null | jq '[.workers[] | select(.status == "DONE")] | length')
+  local cost; cost=$(bash "${SCRIPTS}/status.sh" "$root" --json 2>/dev/null | jq -r '.summary.total_cost')
+  if [[ "$done_count" == "1" && "$cost" != "0" && "$cost" != "null" ]]; then
+    record "P9 pi-sessions-done-fallback" PASS "(done=$done_count cost=$cost)"
+  else
+    record "P9 pi-sessions-done-fallback" FAIL "(done=$done_count cost=$cost)"
+  fi
+  cleanup_root "$root"
+}
+
+# -------------------------------------------------------------------
 # Scenario E — topo sort first wave (reused for Pi)
 # -------------------------------------------------------------------
 run_E() {
@@ -322,6 +366,8 @@ run_P4
 run_P5
 run_P6
 run_P7
+run_P8
+run_P9
 run_E
 run_G
 run_K
