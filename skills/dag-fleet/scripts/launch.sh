@@ -484,224 +484,254 @@ wait_for_dependencies() {
 }
 
 # ---------------------------------------------------------------------------
-# Launch each worker
-# ---------------------------------------------------------------------------
-info "Launching ${WORKER_COUNT} workers with staggered delay=${LAUNCH_DELAY}s ..."
-
 # Build id->index map for O(1) lookup
+# ---------------------------------------------------------------------------
 declare -A WORKER_IDX_MAP
 for _j in $(seq 0 $((WORKER_COUNT - 1))); do
   _wid=$(jq -r ".workers[${_j}].id" "${FLEET_JSON}")
   WORKER_IDX_MAP["${_wid}"]="${_j}"
 done
 
-_launch_seq=0
-while IFS= read -r TOPO_WID; do
-  [[ -z "${TOPO_WID}" ]] && continue
-  i="${WORKER_IDX_MAP[${TOPO_WID}]}"
-  _launch_seq=$((_launch_seq + 1))
-  # Extract worker config
-  WORKER_ID=$(jq -r ".workers[${i}].id" "${FLEET_JSON}")
-  WORKER_TYPE=$(jq -r ".workers[${i}].type // \"read-only\"" "${FLEET_JSON}")
-  WORKER_MODEL=$(jq -r ".workers[${i}].model // \"${DEFAULT_MODEL}\"" "${FLEET_JSON}")
-  WORKER_PROVIDER=$(jq -r ".workers[${i}].provider // \"${DEFAULT_PROVIDER}\"" "${FLEET_JSON}")
-  WORKER_REASONING_EFFORT=$(jq -r ".workers[${i}].reasoning_effort // \"${DEFAULT_REASONING_EFFORT}\"" "${FLEET_JSON}")
-  MAX_TURNS=$(jq -r ".workers[${i}].max_turns // 0" "${FLEET_JSON}")
-  MAX_BUDGET=$(jq -r ".workers[${i}].max_budget_usd // 1.00" "${FLEET_JSON}")
-  WORKER_TASK=$(jq -r ".workers[${i}].task // \"\"" "${FLEET_JSON}")
+# ---------------------------------------------------------------------------
+# Pre-generate ALL worker scripts upfront.
+#
+# Critical for fleets with dependent workers: if launch.sh gets killed
+# (timeout, SSH disconnect, etc.), every worker already has its .run.sh
+# so recovery only needs tmux new-window + send-keys — no script
+# regeneration required.
+# ---------------------------------------------------------------------------
+_pre_generate_all_scripts() {
+  info "Pre-generating .run.sh scripts for all ${WORKER_COUNT} workers ..."
+  while IFS= read -r TOPO_WID; do
+    [[ -z "${TOPO_WID}" ]] && continue
+    local i="${WORKER_IDX_MAP[${TOPO_WID}]}"
+    local _wid _type _model _provider _effort _turns _budget _task
+    _wid=$(jq -r ".workers[${i}].id" "${FLEET_JSON}")
+    _type=$(jq -r ".workers[${i}].type // \"read-only\"" "${FLEET_JSON}")
+    _model=$(jq -r ".workers[${i}].model // \"${DEFAULT_MODEL}\"" "${FLEET_JSON}")
+    _provider=$(jq -r ".workers[${i}].provider // \"${DEFAULT_PROVIDER}\"" "${FLEET_JSON}")
+    _effort=$(jq -r ".workers[${i}].reasoning_effort // \"${DEFAULT_REASONING_EFFORT}\"" "${FLEET_JSON}")
+    _turns=$(jq -r ".workers[${i}].max_turns // 0" "${FLEET_JSON}")
+    _budget=$(jq -r ".workers[${i}].max_budget_usd // 1.00" "${FLEET_JSON}")
+    _task=$(jq -r ".workers[${i}].task // \"\"" "${FLEET_JSON}")
 
-  WORKER_DIR="${FLEET_ROOT}/workers/${WORKER_ID}"
-  WORKER_OUTPUT_DIR="${WORKER_DIR}/output"
-  WORKER_PROMPT="${WORKER_DIR}/prompt.md"
-  WORKER_SESSION_JSONL="${WORKER_DIR}/session.jsonl"
-  WORKER_STATUS_JSON="${WORKER_DIR}/status.json"
-  WORKER_TMUX_NAME="${FLEET_NAME}-${WORKER_ID}"
+    local _wdir="${FLEET_ROOT}/workers/${_wid}"
+    local _prompt="${_wdir}/prompt.md"
+    local _jsonl="${_wdir}/session.jsonl"
+    local _status="${_wdir}/status.json"
 
-  # Create worker directory structure
-  mkdir -p "${WORKER_DIR}"
-  mkdir -p "${WORKER_OUTPUT_DIR}"
+    mkdir -p "${_wdir}/output"
 
-  # Create initial status.json (PENDING)
-  local_ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  tmp_status=$(mktemp "${WORKER_DIR}/.tmp.status.XXXXXX")
-  cat > "${tmp_status}" <<EOF
+    # Skip if no prompt.md — nothing to run
+    [[ -f "${_prompt}" ]] || continue
+
+    # Write PENDING status.json
+    local _ts
+    _ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local _tmp
+    _tmp=$(mktemp "${_wdir}/.tmp.status.XXXXXX")
+    cat > "${_tmp}" <<EOF
 {
-  "worker_id": "${WORKER_ID}",
+  "worker_id": "${_wid}",
   "status": "PENDING",
-  "task": "${WORKER_TASK}",
+  "task": "${_task}",
   "step": "waiting to launch",
-  "last_updated": "${local_ts}",
+  "last_updated": "${_ts}",
   "session_id": null,
   "cost_usd": 0,
   "turns_used": 0,
   "restarts": 0
 }
 EOF
-  mv "${tmp_status}" "${WORKER_STATUS_JSON}"
+    mv "${_tmp}" "${_status}"
 
-  # Ensure output dir exists
-  mkdir -p "${WORKER_DIR}/output"
+    # Build tool restrictions
+    local _pi_tools="" _dis="" _codex_sb="" _codex_ex=""
+    if [[ "${_provider}" == "pi" ]]; then
+      _pi_tools=$(get_pi_tools "${_type}")
+    else
+      _dis=$(get_disallowed_tools "${_type}")
+    fi
+    _codex_sb=$(get_codex_sandbox "${_type}")
+    _codex_ex=$(get_codex_extra_flags "${_type}")
 
-  # Check if prompt.md exists
-  if [[ ! -f "${WORKER_PROMPT}" ]]; then
-    warn "No prompt.md found for ${WORKER_ID} at ${WORKER_PROMPT} — skipping"
-    continue
-  fi
+    local _sname="fleet-${FLEET_NAME}-${_wid}"
 
-  # Check fleet budget before waiting / launching
-  check_fleet_budget || break
+    # build_inner_cmd reads PI_TOOLS from current shell context
+    local PI_TOOLS="${_pi_tools}"
+    local _inner
+    _inner=$(build_inner_cmd \
+      --cwd "${FLEET_ROOT}" \
+      --fleet-root "${FLEET_ROOT}" \
+      --worker-id "${_wid}" \
+      --worker-prompt "${_prompt}" \
+      --worker-model "${_model}" \
+      --fallback-model "${FALLBACK_MODEL}" \
+      --max-turns "${_turns}" \
+      --max-budget "${_budget}" \
+      --session-name "${_sname}" \
+      --disallowed-tools "${_dis}" \
+      --session-jsonl "${_jsonl}" \
+      --worker-dir "${_wdir}" \
+      --provider "${_provider}" \
+      --reasoning-effort "${_effort}" \
+      --codex-sandbox "${_codex_sb}" \
+      --codex-extra-flags "${_codex_ex}" \
+    )
+    if [[ "${KEEP_PANES_OPEN}" == "true" ]]; then
+      _inner+="; read"
+    else
+      _inner+="; touch '${_wdir}/.done'; sleep \${KEEP_PANE_OPEN_SECONDS:-30}"
+    fi
 
-  # Wait for depends_on workers to complete
-  wait_for_dependencies "${i}"
-  dep_wait_rc=$?
-  if [[ "${dep_wait_rc}" -eq 2 ]]; then
-    # Budget exceeded during dependency wait
-    break
-  fi
+    local _runner="${_wdir}/.run.sh"
+    echo "#!/bin/bash" > "${_runner}"
+    echo "${_inner}" >> "${_runner}"
+    chmod +x "${_runner}"
+  done <<< "${TOPO_ORDER}"
+  success "All worker scripts pre-generated."
+}
 
-  # Enforce max_concurrent: wait for a slot
-  while true; do
-    ACTIVE=$(count_active_workers)
-    if [[ "${ACTIVE}" -lt "${MAX_CONCURRENT}" ]]; then
+# ---------------------------------------------------------------------------
+# Core launch loop (spawn workers in topo order)
+# ---------------------------------------------------------------------------
+_launch_workers() {
+  local _seq=0
+  while IFS= read -r TOPO_WID; do
+    [[ -z "${TOPO_WID}" ]] && continue
+    local i="${WORKER_IDX_MAP[${TOPO_WID}]}"
+    _seq=$((_seq + 1))
+
+    local WORKER_ID WORKER_TYPE WORKER_MODEL WORKER_PROVIDER
+    local WORKER_REASONING_EFFORT MAX_TURNS MAX_BUDGET WORKER_TASK
+    WORKER_ID=$(jq -r ".workers[${i}].id" "${FLEET_JSON}")
+    WORKER_TYPE=$(jq -r ".workers[${i}].type // \"read-only\"" "${FLEET_JSON}")
+    WORKER_MODEL=$(jq -r ".workers[${i}].model // \"${DEFAULT_MODEL}\"" "${FLEET_JSON}")
+    WORKER_PROVIDER=$(jq -r ".workers[${i}].provider // \"${DEFAULT_PROVIDER}\"" "${FLEET_JSON}")
+    WORKER_REASONING_EFFORT=$(jq -r ".workers[${i}].reasoning_effort // \"${DEFAULT_REASONING_EFFORT}\"" "${FLEET_JSON}")
+    MAX_TURNS=$(jq -r ".workers[${i}].max_turns // 0" "${FLEET_JSON}")
+    MAX_BUDGET=$(jq -r ".workers[${i}].max_budget_usd // 1.00" "${FLEET_JSON}")
+    WORKER_TASK=$(jq -r ".workers[${i}].task // \"\"" "${FLEET_JSON}")
+
+    local WORKER_DIR="${FLEET_ROOT}/workers/${WORKER_ID}"
+    local WORKER_PROMPT="${WORKER_DIR}/prompt.md"
+    local WORKER_SESSION_JSONL="${WORKER_DIR}/session.jsonl"
+    local WORKER_STATUS_JSON="${WORKER_DIR}/status.json"
+    local RUNNER_SCRIPT="${WORKER_DIR}/.run.sh"
+
+    # Skip if no prompt.md (already warned during pre-gen)
+    [[ -f "${WORKER_PROMPT}" ]] || continue
+
+    # Check fleet budget before waiting / launching
+    check_fleet_budget || break
+
+    # Wait for depends_on workers to complete
+    wait_for_dependencies "${i}"
+    local dep_wait_rc=$?
+    if [[ "${dep_wait_rc}" -eq 2 ]]; then
       break
     fi
-    warn "Concurrency limit reached (${ACTIVE}/${MAX_CONCURRENT}). Waiting 10s for a slot..."
-    sleep 10
-  done
 
-  # Check budget again after waiting for concurrency slot
-  check_fleet_budget || break
+    # Enforce max_concurrent: wait for a slot
+    while true; do
+      local ACTIVE
+      ACTIVE=$(count_active_workers)
+      if [[ "${ACTIVE}" -lt "${MAX_CONCURRENT}" ]]; then
+        break
+      fi
+      warn "Concurrency limit reached (${ACTIVE}/${MAX_CONCURRENT}). Waiting 10s for a slot..."
+      sleep 10
+    done
 
-  # Build tool restrictions (provider-specific)
-  PI_TOOLS=""
-  if [[ "${WORKER_PROVIDER}" == "pi" ]]; then
-    PI_TOOLS=$(get_pi_tools "${WORKER_TYPE}")
-    DISALLOWED_TOOLS=""
-  else
-    DISALLOWED_TOOLS=$(get_disallowed_tools "${WORKER_TYPE}")
-  fi
-  CODEX_SANDBOX=$(get_codex_sandbox "${WORKER_TYPE}")
-  CODEX_EXTRA=$(get_codex_extra_flags "${WORKER_TYPE}")
+    # Check budget again after waiting for concurrency slot
+    check_fleet_budget || break
 
-  # Session name for resumability
-  SESSION_NAME="fleet-${FLEET_NAME}-${WORKER_ID}"
-
-  info "Launching ${BOLD}${WORKER_ID}${NC} (provider=${WORKER_PROVIDER}, type=${WORKER_TYPE}, model=${WORKER_MODEL})"
-
-  # Build INNER_CMD via shared helper
-  INNER_CMD=$(build_inner_cmd \
-    --cwd "${FLEET_ROOT}" \
-    --fleet-root "${FLEET_ROOT}" \
-    --worker-id "${WORKER_ID}" \
-    --worker-prompt "${WORKER_PROMPT}" \
-    --worker-model "${WORKER_MODEL}" \
-    --fallback-model "${FALLBACK_MODEL}" \
-    --max-turns "${MAX_TURNS}" \
-    --max-budget "${MAX_BUDGET}" \
-    --session-name "${SESSION_NAME}" \
-    --disallowed-tools "${DISALLOWED_TOOLS}" \
-    --session-jsonl "${WORKER_SESSION_JSONL}" \
-    --worker-dir "${WORKER_DIR}" \
-    --provider "${WORKER_PROVIDER}" \
-    --reasoning-effort "${WORKER_REASONING_EFFORT}" \
-    --codex-sandbox "${CODEX_SANDBOX}" \
-    --codex-extra-flags "${CODEX_EXTRA}" \
-    --extra-exports "PI_TOOLS=${PI_TOOLS}" \
-  )
-  if [[ "${KEEP_PANES_OPEN}" == "true" ]]; then
-    INNER_CMD+="; read"
-  else
-    INNER_CMD+="; touch '${WORKER_DIR}/.done'; sleep \${KEEP_PANE_OPEN_SECONDS:-30}"
-  fi
-
-  # Always write a runner script to avoid quoting issues when spawning via tmux.
-  # Then optionally wrap with asciinema recording if enabled (config.record, default false).
-  RUNNER_SCRIPT="${WORKER_DIR}/.run.sh"
-  echo "#!/bin/bash" > "${RUNNER_SCRIPT}"
-  echo "${INNER_CMD}" >> "${RUNNER_SCRIPT}"
-  chmod +x "${RUNNER_SCRIPT}"
-
-  WORKER_RECORDING="${WORKER_DIR}/${WORKER_ID}.cast"
-  if [[ "${RECORD}" == "true" ]] && command -v asciinema &>/dev/null; then
-    TMUX_SPAWN_CMD="asciinema rec '${WORKER_RECORDING}' --overwrite -c '${RUNNER_SCRIPT}'"
-  else
-    TMUX_SPAWN_CMD="bash '${RUNNER_SCRIPT}'"
-  fi
-
-  # P0.1: per-worker spawn lock + tmux window dedupe + terminal-result check.
-  WORKER_SPAWN_LOCK="${WORKER_DIR}/.launch.lock"
-  _spawn_ok=0
-  (
-    exec 9>"${WORKER_SPAWN_LOCK}"
-    if ! flock -n 9; then
-      echo "SKIP_LOCK"
-      exit 0
+    # Re-derive spawn command (recording wrapper may differ)
+    local WORKER_RECORDING="${WORKER_DIR}/${WORKER_ID}.cast"
+    local TMUX_SPAWN_CMD
+    if [[ "${RECORD}" == "true" ]] && command -v asciinema &>/dev/null; then
+      TMUX_SPAWN_CMD="asciinema rec '${WORKER_RECORDING}' --overwrite -c '${RUNNER_SCRIPT}'"
+    else
+      TMUX_SPAWN_CMD="bash '${RUNNER_SCRIPT}'"
     fi
-    # Check session is still alive before attempting window ops
-    if ! tmux has-session -t "${TMUX_SESSION}" 2>/dev/null; then
-      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] DEAD session ${TMUX_SESSION} gone before spawn of ${WORKER_ID}" >> "${TMUX_LOG}"
-      echo "FAIL_SESSION_DEAD"
-      exit 1
-    fi
-    if tmux list-windows -t "${TMUX_SESSION}" -F '#W' 2>/dev/null | grep -Fxq "${WORKER_ID}"; then
-      echo "SKIP_WINDOW"
-      exit 0
-    fi
-    if [[ -s "${WORKER_SESSION_JSONL}" ]] && (
-      grep -q '"type":"result"' "${WORKER_SESSION_JSONL}" 2>/dev/null ||
-      grep -q '"type":"turn.completed"' "${WORKER_SESSION_JSONL}" 2>/dev/null ||
-      grep -q '"stopReason":"stop"' "${WORKER_SESSION_JSONL}" 2>/dev/null
-    ); then
-      echo "SKIP_RESULT"
-      exit 0
-    fi
-    if [[ -s "${WORKER_SESSION_JSONL}" ]]; then
-      mv "${WORKER_SESSION_JSONL}" "${WORKER_SESSION_JSONL}.$(date +%s).bak"
-    fi
-    echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] PRE  new-window ${WORKER_ID} cmd=[${TMUX_SPAWN_CMD}]" >> "${TMUX_LOG}"
-    _nw_stderr=$(tmux new-window -t "${TMUX_SESSION}" -n "${WORKER_ID}" \
-      "${TMUX_SPAWN_CMD}" 2>&1) || {
-      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] FAIL new-window ${WORKER_ID}: rc=$? stderr=${_nw_stderr}" >> "${TMUX_LOG}"
-      echo "FAIL_NEW_WINDOW"
-      exit 1
-    }
-    echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] OK   new-window ${WORKER_ID}" >> "${TMUX_LOG}"
-    # Brief pause then verify session survived
-    sleep 0.3
-    _post_windows=$(tmux list-windows -t "${TMUX_SESSION}" -F '#W' 2>/dev/null || echo "SESSION_GONE")
-    echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] POST new-window ${WORKER_ID} windows=[${_post_windows}]" >> "${TMUX_LOG}"
-    if ! tmux has-session -t "${TMUX_SESSION}" 2>/dev/null; then
-      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] DEAD session ${TMUX_SESSION} gone AFTER new-window ${WORKER_ID}" >> "${TMUX_LOG}"
-      echo "FAIL_SESSION_DIED"
-      exit 1
-    fi
-    echo "SPAWNED"
-  ) > "${WORKER_DIR}/.spawn.out" 2>&1 || true
-  _spawn_result=$(tail -1 "${WORKER_DIR}/.spawn.out" 2>/dev/null || echo "")
-  # Keep .spawn.out for debugging — mv instead of rm
-  mv "${WORKER_DIR}/.spawn.out" "${WORKER_DIR}/.spawn.out.last" 2>/dev/null || true
-  case "${_spawn_result}" in
-    SKIP_LOCK)
-      info "worker ${WORKER_ID} spawn lock held by another process — skipping"
-      continue ;;
-    SKIP_WINDOW)
-      info "worker ${WORKER_ID} already has a tmux window — skipping"
-      continue ;;
-    SKIP_RESULT)
-      info "worker ${WORKER_ID} already has a terminal result — skipping"
-      continue ;;
-    SPAWNED) ;;
-    FAIL_SESSION_DEAD|FAIL_NEW_WINDOW|FAIL_SESSION_DIED)
-      error "worker ${WORKER_ID} spawn failed: ${_spawn_result} — see ${TMUX_LOG}"
-      continue ;;
-    *)
-      warn "worker ${WORKER_ID} spawn produced unexpected output: ${_spawn_result}" ;;
-  esac
 
-  # Update status to RUNNING
-  local_ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  tmp_status=$(mktemp "${WORKER_DIR}/.tmp.status.XXXXXX")
-  cat > "${tmp_status}" <<EOF
+    info "Launching ${BOLD}${WORKER_ID}${NC} (provider=${WORKER_PROVIDER}, type=${WORKER_TYPE}, model=${WORKER_MODEL})"
+
+    # P0.1: per-worker spawn lock + tmux window dedupe + terminal-result check.
+    local WORKER_SPAWN_LOCK="${WORKER_DIR}/.launch.lock"
+    (
+      exec 9>"${WORKER_SPAWN_LOCK}"
+      if ! flock -n 9; then
+        echo "SKIP_LOCK"
+        exit 0
+      fi
+      if ! tmux has-session -t "${TMUX_SESSION}" 2>/dev/null; then
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] DEAD session ${TMUX_SESSION} gone before spawn of ${WORKER_ID}" >> "${TMUX_LOG}"
+        echo "FAIL_SESSION_DEAD"
+        exit 1
+      fi
+      if tmux list-windows -t "${TMUX_SESSION}" -F '#W' 2>/dev/null | grep -Fxq "${WORKER_ID}"; then
+        echo "SKIP_WINDOW"
+        exit 0
+      fi
+      if [[ -s "${WORKER_SESSION_JSONL}" ]] && (
+        grep -q '"type":"result"' "${WORKER_SESSION_JSONL}" 2>/dev/null ||
+        grep -q '"type":"turn.completed"' "${WORKER_SESSION_JSONL}" 2>/dev/null ||
+        grep -q '"stopReason":"stop"' "${WORKER_SESSION_JSONL}" 2>/dev/null
+      ); then
+        echo "SKIP_RESULT"
+        exit 0
+      fi
+      if [[ -s "${WORKER_SESSION_JSONL}" ]]; then
+        mv "${WORKER_SESSION_JSONL}" "${WORKER_SESSION_JSONL}.$(date +%s).bak"
+      fi
+      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] PRE  new-window ${WORKER_ID} cmd=[${TMUX_SPAWN_CMD}]" >> "${TMUX_LOG}"
+      local _nw_stderr
+      _nw_stderr=$(tmux new-window -t "${TMUX_SESSION}" -n "${WORKER_ID}" \
+        "${TMUX_SPAWN_CMD}" 2>&1) || {
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] FAIL new-window ${WORKER_ID}: rc=$? stderr=${_nw_stderr}" >> "${TMUX_LOG}"
+        echo "FAIL_NEW_WINDOW"
+        exit 1
+      }
+      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] OK   new-window ${WORKER_ID}" >> "${TMUX_LOG}"
+      sleep 0.3
+      local _post_windows
+      _post_windows=$(tmux list-windows -t "${TMUX_SESSION}" -F '#W' 2>/dev/null || echo "SESSION_GONE")
+      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] POST new-window ${WORKER_ID} windows=[${_post_windows}]" >> "${TMUX_LOG}"
+      if ! tmux has-session -t "${TMUX_SESSION}" 2>/dev/null; then
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] DEAD session ${TMUX_SESSION} gone AFTER new-window ${WORKER_ID}" >> "${TMUX_LOG}"
+        echo "FAIL_SESSION_DIED"
+        exit 1
+      fi
+      echo "SPAWNED"
+    ) > "${WORKER_DIR}/.spawn.out" 2>&1 || true
+    local _spawn_result
+    _spawn_result=$(tail -1 "${WORKER_DIR}/.spawn.out" 2>/dev/null || echo "")
+    mv "${WORKER_DIR}/.spawn.out" "${WORKER_DIR}/.spawn.out.last" 2>/dev/null || true
+    case "${_spawn_result}" in
+      SKIP_LOCK)
+        info "worker ${WORKER_ID} spawn lock held by another process — skipping"
+        continue ;;
+      SKIP_WINDOW)
+        info "worker ${WORKER_ID} already has a tmux window — skipping"
+        continue ;;
+      SKIP_RESULT)
+        info "worker ${WORKER_ID} already has a terminal result — skipping"
+        continue ;;
+      SPAWNED) ;;
+      FAIL_SESSION_DEAD|FAIL_NEW_WINDOW|FAIL_SESSION_DIED)
+        error "worker ${WORKER_ID} spawn failed: ${_spawn_result} — see ${TMUX_LOG}"
+        continue ;;
+      *)
+        warn "worker ${WORKER_ID} spawn produced unexpected output: ${_spawn_result}" ;;
+    esac
+
+    # Update status to RUNNING
+    local local_ts
+    local_ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local tmp_status
+    tmp_status=$(mktemp "${WORKER_DIR}/.tmp.status.XXXXXX")
+    cat > "${tmp_status}" <<EOF
 {
   "worker_id": "${WORKER_ID}",
   "status": "RUNNING",
@@ -714,49 +744,82 @@ EOF
   "restarts": 0
 }
 EOF
-  mv "${tmp_status}" "${WORKER_STATUS_JSON}"
+    mv "${tmp_status}" "${WORKER_STATUS_JSON}"
 
-  success "  Window created: ${TMUX_SESSION}:${WORKER_ID}"
+    success "  Window created: ${TMUX_SESSION}:${WORKER_ID}"
 
-  # Update fleet.json worker status
+    # Update fleet.json worker status
+    local tmp_fleet
+    tmp_fleet=$(mktemp "${FLEET_ROOT}/.tmp.fleet.XXXXXX")
+    jq --arg id "${WORKER_ID}" \
+       --arg ts "${local_ts}" \
+       --arg sname "fleet-${FLEET_NAME}-${WORKER_ID}" \
+       '(.workers[] | select(.id == $id)) |= . + {
+         "status": "running",
+         "session_name": $sname,
+         "started_at": $ts
+       }' "${FLEET_JSON}" > "${tmp_fleet}"
+    mv "${tmp_fleet}" "${FLEET_JSON}"
+
+    # Check fleet budget after launching this worker
+    check_fleet_budget || break
+
+    # Staggered delay (skip after last worker)
+    if [[ "${_seq}" -lt "${WORKER_COUNT}" ]]; then
+      info "Waiting ${LAUNCH_DELAY}s before next worker..."
+      sleep "${LAUNCH_DELAY}"
+    fi
+  done <<< "${TOPO_ORDER}"
+
+  # Update fleet.json overall status
+  local local_ts
+  local_ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  local tmp_fleet
   tmp_fleet=$(mktemp "${FLEET_ROOT}/.tmp.fleet.XXXXXX")
-  jq --arg id "${WORKER_ID}" \
-     --arg ts "${local_ts}" \
-     --arg sname "${SESSION_NAME}" \
-     '(.workers[] | select(.id == $id)) |= . + {
-       "status": "running",
-       "session_name": $sname,
-       "started_at": $ts
-     }' "${FLEET_JSON}" > "${tmp_fleet}"
+  jq --arg ts "${local_ts}" \
+     '.status = "running" | .launched_at = $ts' \
+     "${FLEET_JSON}" > "${tmp_fleet}"
   mv "${tmp_fleet}" "${FLEET_JSON}"
 
-  # Check fleet budget after launching this worker
-  check_fleet_budget || break
-
-  # Staggered delay (skip after last worker)
-  if [[ "${_launch_seq}" -lt "${WORKER_COUNT}" ]]; then
-    info "Waiting ${LAUNCH_DELAY}s before next worker..."
-    sleep "${LAUNCH_DELAY}"
-  fi
-done <<< "${TOPO_ORDER}"
-
-# ---------------------------------------------------------------------------
-# Update fleet.json overall status
-# ---------------------------------------------------------------------------
-local_ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-tmp_fleet=$(mktemp "${FLEET_ROOT}/.tmp.fleet.XXXXXX")
-jq --arg ts "${local_ts}" \
-   '.status = "running" | .launched_at = $ts' \
-   "${FLEET_JSON}" > "${tmp_fleet}"
-mv "${tmp_fleet}" "${FLEET_JSON}"
+  echo ""
+  success "Fleet '${BOLD}${FLEET_NAME}${NC}${GREEN}' launched successfully!"
+  echo ""
+  info "Attach to session:  ${BOLD}tmux attach -t ${TMUX_SESSION}${NC}"
+  info "Monitor window:     ${BOLD}tmux attach -t ${TMUX_SESSION}:monitor${NC}"
+  info "Kill fleet:         ${BOLD}kill.sh ${FLEET_ROOT} all${NC}"
+  echo ""
+}
 
 # ---------------------------------------------------------------------------
-# Done
+# Main: pre-generate scripts, then launch (fork supervisor if deps exist)
 # ---------------------------------------------------------------------------
-echo ""
-success "Fleet '${BOLD}${FLEET_NAME}${NC}${GREEN}' launched successfully!"
-echo ""
-info "Attach to session:  ${BOLD}tmux attach -t ${TMUX_SESSION}${NC}"
-info "Monitor window:     ${BOLD}tmux attach -t ${TMUX_SESSION}:monitor${NC}"
-info "Kill fleet:         ${BOLD}kill.sh ${FLEET_ROOT} all${NC}"
-echo ""
+_pre_generate_all_scripts
+
+# Detect if any worker has dependencies
+HAS_DEPS=$(jq '[.workers[] | select(.depends_on | length > 0)] | length' "${FLEET_JSON}")
+
+if [[ "${HAS_DEPS}" -gt 0 ]]; then
+  # Fork a background supervisor so the parent can exit immediately.
+  # This prevents timeouts (SSH, cron, CI) from killing the orchestrator
+  # while it waits for long-running dependencies.
+  (
+    # Re-acquire flock in child so parent release doesn't matter
+    exec 8>"${LAUNCH_LOCK}"
+    flock -x 8
+    echo "${BASHPID}" > "${LAUNCH_PID_FILE}"
+    trap 'rm -f "${LAUNCH_PID_FILE}"' EXIT
+    _launch_workers
+  ) &
+  SUPERVISOR_PID=$!
+  disown ${SUPERVISOR_PID} 2>/dev/null || true
+
+  success "Fleet supervisor forked to background (pid ${SUPERVISOR_PID})"
+  info "First-wave workers launching now. Dependent workers auto-launch when deps complete."
+  info "Attach:  tmux attach -t ${TMUX_SESSION}"
+  info "Status:  bash ${SCRIPT_DIR}/status.sh ${FLEET_ROOT} --watch"
+  info "Kill:    bash ${SCRIPT_DIR}/kill.sh ${FLEET_ROOT} all"
+  echo ""
+  exit 0
+else
+  _launch_workers
+fi
