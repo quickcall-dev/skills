@@ -1,6 +1,6 @@
 ---
 name: worktree-fleet
-description: Independence-validated parallel fleet that runs each worker (claude -p or codex exec) in its own git worktree. Use when tasks touch non-overlapping files and you need merge-safe isolation (each worker on its own branch). For DAG-ordered one-shot workers with budgets, use dag-fleet. For headless iteration with a reviewer loop, use iterative-fleet.
+description: Independence-validated parallel fleet that runs each worker (claude -p, codex exec, or pi -p) in its own git worktree. Use when tasks touch non-overlapping files and you need merge-safe isolation (each worker on its own branch). For DAG-ordered one-shot workers with budgets, use dag-fleet. For headless iteration with a reviewer loop, use iterative-fleet.
 argument-hint: "[launch|status|merge|cleanup] [args]"
 allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
 model: claude-sonnet-4-6
@@ -80,7 +80,7 @@ New fields vs dag-fleet:
 
 **Worker type override (Claude only):** Worktree workers always need Bash for `git commit`. If you set `type` to `read-only`, `write`, or `reviewer`, launch.sh will automatically override to `code-run` with a warning. The worktree itself provides isolation — Bash restrictions are unnecessary here. This override does not apply to codex workers (codex uses sandbox modes).
 
-**Provider support:** Set `"provider": "codex"` at config or per-worker level to use OpenAI Codex CLI instead of Claude. Codex workers use `--sandbox workspace-write` (needed for git commit). See dag-fleet SKILL.md for full codex provider documentation (model aliases, reasoning_effort, limitations).
+**Provider support:** Set `"provider": "codex"` or `"provider": "pi"` at config or per-worker level to use OpenAI Codex CLI or pi.dev CLI instead of Claude. Codex workers use `--sandbox workspace-write` (needed for git commit). Pi workers use `--tools` allowlists for tool restriction. See dag-fleet SKILL.md for full provider documentation (model aliases, reasoning_effort, limitations).
 
 **Default max_turns is 100** (not 50 like dag-fleet). Worktree workers typically edit, test, and commit — they need headroom.
 

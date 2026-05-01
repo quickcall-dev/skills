@@ -1,6 +1,6 @@
 ---
 name: iterative-fleet
-description: Reviewer-gated iterative fleet for headless `claude -p` or `codex exec` workers that run in cycles until a designated reviewer approves the output. Use when the work needs multiple rounds of iteration with a quality gate — a reviewer worker reads all worker logs, writes a verdict (lgtm | iterate | escalate), and the orchestrator decides whether to continue, pause, or stop. NEVER kills or restarts workers automatically; the operator owns all kill/pause decisions.
+description: Reviewer-gated iterative fleet for headless `claude -p`, `codex exec`, or `pi -p` workers that run in cycles until a designated reviewer approves the output. Use when the work needs multiple rounds of iteration with a quality gate — a reviewer worker reads all worker logs, writes a verdict (lgtm | iterate | escalate), and the orchestrator decides whether to continue, pause, or stop. NEVER kills or restarts workers automatically; the operator owns all kill/pause decisions.
 argument-hint: "[launch|status|pause|resume|kill] [args]"
 allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
 model: claude-opus-4-6
@@ -12,7 +12,7 @@ metadata:
 
 # Iterative Fleet
 
-A skill for reviewer-gated iterative loops of parallel `claude -p` or `codex exec` workers. Workers run per-iteration, a reviewer reads their output and writes a verdict, and a generated orchestrator decides whether to continue or stop — without ever killing or restarting workers. Supports both Claude and Codex providers — set per-fleet or per-worker. See dag-fleet SKILL.md for full codex provider documentation (model aliases, reasoning_effort, limitations).
+A skill for reviewer-gated iterative loops of parallel `claude -p`, `codex exec`, or `pi -p` workers. Workers run per-iteration, a reviewer reads their output and writes a verdict, and a generated orchestrator decides whether to continue or stop — without ever killing or restarting workers. Supports Claude, Codex, and Pi providers — set per-fleet or per-worker. See dag-fleet SKILL.md for full provider documentation (model aliases, reasoning_effort, limitations).
 
 ## When to use this skill
 

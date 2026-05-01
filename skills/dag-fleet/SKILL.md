@@ -1,6 +1,6 @@
 ---
 name: dag-fleet
-description: Persistent, budgeted, DAG-ordered runner for parallel `claude -p` or `codex exec` workers in tmux. Use ONLY when you need persistence across sessions, per-worker budget caps, dependency ordering, or mixed models/providers per worker. For ad-hoc parallel sub-agents inside a live conversation, use Claude Code's built-in Agent tool instead.
+description: Persistent, budgeted, DAG-ordered runner for parallel `claude -p`, `codex exec`, or `pi -p` workers in tmux. Use ONLY when you need persistence across sessions, per-worker budget caps, dependency ordering, or mixed models/providers per worker. For ad-hoc parallel sub-agents inside a live conversation, use Claude Code's built-in Agent tool instead.
 argument-hint: "[launch|relaunch-worker|status|kill|report] [args]"
 allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
 model: claude-sonnet-4-6
@@ -12,7 +12,7 @@ metadata:
 
 # Fleet
 
-A skill for running parallel `claude -p` or `codex exec` workers in tmux with budgets and DAG dependencies. Supports both Claude and Codex providers — set per-fleet or per-worker. Operator owns all kill / steer / re-direction — there is no auto-restart, no auto-verify, no babysitter loop.
+A skill for running parallel `claude -p`, `codex exec`, or `pi -p` workers in tmux with budgets and DAG dependencies. Supports Claude, Codex, and Pi providers — set per-fleet or per-worker. Operator owns all kill / steer / re-direction — there is no auto-restart, no auto-verify, no babysitter loop.
 
 ## When to use this skill (and when NOT to)
 
@@ -113,7 +113,7 @@ Refuses with exit 2 if live workers detected — pass `--force` to kill them fir
 
 ## Worker types
 
-The `type` field on each worker controls the `--disallowed-tools` set passed to claude. Pick one:
+The `type` field on each worker controls the `--disallowed-tools` set passed to claude (or the `--tools` allowlist for pi, or the sandbox mode for codex). Pick one:
 
 - `read-only` — disallows: Bash, Edit, Write, Agent, WebFetch, WebSearch. **Cannot write files.** Only use for pure analysis where output is captured from assistant messages in session.jsonl.
 - `write` — disallows: Bash, Agent, WebFetch, WebSearch. **Use for synthesizers and any worker that writes output files.**
@@ -126,9 +126,23 @@ The `type` field on each worker controls the `--disallowed-tools` set passed to 
 
 See `references/worker-types.md` for the full permission matrix.
 
-## Provider support (Claude + Codex)
+## Provider support (Claude + Codex + Pi)
 
-Workers can run on either `claude` (default) or `codex` (OpenAI Codex CLI). Set at fleet level or per-worker:
+Workers can run on `claude` (default), `codex` (OpenAI Codex CLI), or `pi` (pi.dev CLI). Set at fleet level or per-worker:
+
+```json
+{
+  "config": {
+    "provider": "pi",
+    "model": "pi/sonnet",
+    "reasoning_effort": "medium"
+  },
+  "workers": [
+    { "id": "researcher", "type": "research", "provider": "pi", "model": "pi/sonnet", "reasoning_effort": "medium" },
+    { "id": "writer", "type": "write", "provider": "claude", "model": "sonnet" }
+  ]
+}
+```
 
 ```json
 {
@@ -144,12 +158,12 @@ Workers can run on either `claude` (default) or `codex` (OpenAI Codex CLI). Set 
 }
 ```
 
-### Codex-specific fields
+### Provider-specific fields
 
 | Field | Values | Default | Scope |
 |---|---|---|---|
-| `provider` | `"claude"` \| `"codex"` | `"claude"` | config + per-worker |
-| `reasoning_effort` | `"low"` \| `"medium"` \| `"high"` | (none) | config + per-worker, codex only |
+| `provider` | `"claude"` \| `"codex"` \| `"pi"` | `"claude"` | config + per-worker |
+| `reasoning_effort` | `"low"` \| `"medium"` \| `"high"` | (none) | config + per-worker, codex/pi only |
 
 ### Codex model aliases
 
@@ -159,13 +173,30 @@ Workers can run on either `claude` (default) or `codex` (OpenAI Codex CLI). Set 
 | `gpt-5.4-mini` | Fast/cheap — validators, simple tasks |
 | `gpt-5.3-codex` | Coding-focused (migrating to gpt-5.4) |
 
-### Codex limitations vs Claude
+### Pi model aliases
 
+| Model | Use case |
+|---|---|
+| `pi/sonnet` | Flagship reasoning |
+| `pi/haiku` | Fast/cheap — validators, simple tasks |
+| `pi/opus` | Deep reasoning — complex research |
+
+Pi model IDs may contain `/` (e.g., `pi/sonnet`). These are passed through directly to `pi -p --model`.
+
+### Provider limitations vs Claude
+
+**Codex:**
 - **No `--max-budget-usd`** — codex has no per-worker budget cap. Fleet-level cost tracking still works (estimated from token counts).
 - **No `--fallback-model`** — codex has no automatic model fallback.
 - **No per-tool disabling** — codex uses sandbox modes (`read-only`, `workspace-write`) instead of `--disallowed-tools`. Worker types are mapped automatically.
 - **Web search** — research workers get `-c 'web_search="live"'` automatically.
 - **All output workers need `workspace-write`** — codex `read-only` sandbox blocks ALL file writes including output.
+
+**Pi:**
+- **No `--max-budget-usd`** — pi has no per-worker budget cap. Fleet-level cost tracking works via token estimation.
+- **No `--fallback-model`** — pi has no automatic model fallback.
+- **`--tools` allowlist** — pi uses an allowlist (not blocklist). Worker types are mapped automatically to the correct tool set.
+- **Session dir** — pi writes sessions to a per-worker `.pi-sessions/` directory and symlinks the JSONL log to the standard path.
 
 ## DAG dependencies
 

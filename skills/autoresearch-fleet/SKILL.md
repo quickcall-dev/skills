@@ -1,6 +1,6 @@
 ---
 name: autoresearch-fleet
-description: Karpathy-inspired autonomous research loop. Agent edits one file, evals, keeps or discards, repeats. Plateau-triggered web search breaks through ceilings. Git as state machine. Runs until stopped or budget exhausted.
+description: Karpathy-inspired autonomous research loop. Agent edits one file, evals, keeps or discards, repeats. Plateau-triggered web search breaks through ceilings. Git as state machine. Runs until stopped or budget exhausted. Supports claude, codex, and pi providers.
 argument-hint: "[launch|status|view|report|pause|resume|kill] <fleet-root>"
 allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
 model: claude-opus-4-6
@@ -32,7 +32,7 @@ Autonomous research loop inspired by [karpathy/autoresearch](https://github.com/
 │  for each iteration:                             │
 │    1. Count trailing discards in results.tsv     │
 │    2. If >= plateau_threshold → search prompt    │
-│    3. Spawn agent (claude -p or codex exec)      │
+│    3. Spawn agent (claude -p, codex exec, or pi -p)      │
 │    4. Agent reads program.md, edits file, evals  │
 │    5. Agent updates results.tsv, keeps/reverts   │
 │    6. Check stop conditions (iter/cost/plateau)  │
@@ -98,7 +98,7 @@ $FLEET_ROOT/                    # The problem directory
 |-------|---------|-------------|
 | `config.model` | `sonnet` | Agent model |
 | `config.fallback_model` | `haiku` | Fallback model (must differ from model) |
-| `config.provider` | `claude` | `claude` or `codex` |
+| `config.provider` | `claude` | `claude`, `codex`, or `pi` |
 | `config.budget_per_iter` | `1.00` | Max USD per iteration |
 | `config.max_turns` | `0` | Max agent turns (0 = unlimited) |
 | `problem.workdir` | fleet root | **Working directory** — the repo/dir the agent operates in. Fleet root stores config + logs only. |
