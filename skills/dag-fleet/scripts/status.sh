@@ -204,54 +204,59 @@ print(f'{c:.2f}')
         local role stop_reason
         role=$(tail -1 "$log" 2>/dev/null | jq -r '.message.role // empty' 2>/dev/null || echo "")
         stop_reason=$(tail -1 "$log" 2>/dev/null | jq -r '.message.stopReason // empty' 2>/dev/null || echo "")
+        # Shared pi cost accumulator: sums usage from ALL assistant messages
+        _pi_accumulate_cost() {
+          python3 - "$1" <<'PYEOF' 2>/dev/null || echo "0"
+import sys, json
+log = sys.argv[1]
+inp = outp = cache = 0
+cost_total = 0.0
+try:
+    with open(log) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+            except Exception:
+                continue
+            if ev.get("type") == "message":
+                msg = ev.get("message") or {}
+                if msg.get("role") == "assistant":
+                    u = msg.get("usage") or {}
+                    # Prefer real cost if present (non-zero)
+                    c = u.get("cost", {}).get("total", 0)
+                    if c and float(c) > 0:
+                        cost_total += float(c)
+                    else:
+                        inp += int(u.get("input") or 0)
+                        outp += int(u.get("output") or 0)
+                        cache += int(u.get("cacheRead") or 0)
+except Exception:
+    pass
+if cost_total > 0:
+    print(f"{round(cost_total, 4)}")
+else:
+    cost = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
+    print(f"{round(cost, 4)}")
+PYEOF
+        }
         if [[ "$role" == "assistant" && "$stop_reason" == "stop" ]]; then
           status="DONE"
           done_count=$((done_count + 1))
-          # Extract cost (may be 0 for kimi — estimate from tokens)
-          cost=$(tail -1 "$log" 2>/dev/null | python3 -c "
-import sys, json
-line = sys.stdin.readline().strip()
-if not line: print('0'); sys.exit()
-ev = json.loads(line)
-u = ev.get('message', {}).get('usage', {})
-cost_val = u.get('cost', {}).get('total', 0)
-if cost_val and float(cost_val) > 0:
-    print(f'{float(cost_val):.2f}')
-    sys.exit()
-inp = u.get('input', 0)
-outp = u.get('output', 0)
-cache = u.get('cacheRead', 0)
-c = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
-print(f'{c:.2f}')
-" 2>/dev/null || echo "0")
+          cost=$(_pi_accumulate_cost "$log")
+          [[ -z "$cost" ]] && cost="0"
         elif [[ "$role" == "assistant" && "$stop_reason" == "toolUse" ]]; then
           status="RUNNING"
           running=$((running + 1))
-          # Estimate cost from current message's usage (pi-specific)
-          cost=$(tail -1 "$log" 2>/dev/null | python3 -c "
-import sys, json
-ev = json.loads(sys.stdin.readline())
-u = ev.get('message', {}).get('usage', {})
-inp = u.get('input', 0)
-outp = u.get('output', 0)
-cache = u.get('cacheRead', 0)
-c = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
-print(f'{c:.2f}')
-" 2>/dev/null || echo "0")
+          cost=$(_pi_accumulate_cost "$log")
+          [[ -z "$cost" ]] && cost="0"
         else
           status="RUNNING"
           running=$((running + 1))
-          # Estimate cost from current message's usage (pi-specific)
-          cost=$(tail -1 "$log" 2>/dev/null | python3 -c "
-import sys, json
-ev = json.loads(sys.stdin.readline())
-u = ev.get('message', {}).get('usage', {})
-inp = u.get('input', 0)
-outp = u.get('output', 0)
-cache = u.get('cacheRead', 0)
-c = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
-print(f'{c:.2f}')
-" 2>/dev/null || echo "0")
+          cost=$(_pi_accumulate_cost "$log")
+          [[ -z "$cost" ]] && cost="0"
         fi
       else
         status="RUNNING"

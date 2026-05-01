@@ -88,9 +88,19 @@ if [[ "${EMIT_TOOL_USE:-0}" == "1" ]]; then
   STOP_REASON="toolUse"
 fi
 
-# assistant message (final) with usage and stopReason
-# Use large token counts so cost estimation produces non-zero value
-printf '{"type":"message","id":"msg2","parentId":"msg1","timestamp":"%s","message":{"role":"assistant","content":[{"type":"text","text":"Task complete for worker %s"}],"api":"anthropic-messages","provider":"fake-pi","model":"%s","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"%s","timestamp":%s}}\n' \
-  "$TS2" "${WORKER_ID:-unknown}" "$MODEL" "$STOP_REASON" "$(date +%s)000"
+# If toolUse, emit assistant with toolCalls followed by toolResult(s)
+# to match real pi session structure where toolResult is the last event.
+if [[ "$STOP_REASON" == "toolUse" ]]; then
+  TS3="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf '{"type":"message","id":"msg2","parentId":"msg1","timestamp":"%s","message":{"role":"assistant","content":[{"type":"thinking","thinking":"Using bash tool"},{"type":"text","text":"Running command"},{"type":"toolCall","id":"tool_fake1","name":"bash","arguments":{"command":"echo done"}}],"api":"anthropic-messages","provider":"fake-pi","model":"%s","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"toolUse","timestamp":%s,"responseId":"msg_fake_resp"}}\n' \
+    "$TS2" "$MODEL" "$(date +%s)000"
+  printf '{"type":"message","id":"msg3","parentId":"msg2","timestamp":"%s","message":{"role":"toolResult","toolCallId":"tool_fake1","toolName":"bash","content":[{"type":"text","text":"done"}],"isError":false,"timestamp":%s}}\n' \
+    "$TS3" "$(date +%s)000"
+else
+  # assistant message (final) with usage and stopReason
+  # Use large token counts so cost estimation produces non-zero value
+  printf '{"type":"message","id":"msg2","parentId":"msg1","timestamp":"%s","message":{"role":"assistant","content":[{"type":"text","text":"Task complete for worker %s"}],"api":"anthropic-messages","provider":"fake-pi","model":"%s","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"%s","timestamp":%s}}\n' \
+    "$TS2" "${WORKER_ID:-unknown}" "$MODEL" "$STOP_REASON" "$(date +%s)000"
+fi
 
 exit 0
