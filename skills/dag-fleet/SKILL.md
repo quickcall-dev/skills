@@ -134,11 +134,11 @@ Workers can run on `claude` (default), `codex` (OpenAI Codex CLI), or `pi` (pi.d
 {
   "config": {
     "provider": "pi",
-    "model": "pi/sonnet",
+    "model": "k2p6",
     "reasoning_effort": "medium"
   },
   "workers": [
-    { "id": "researcher", "type": "research", "provider": "pi", "model": "pi/sonnet", "reasoning_effort": "medium" },
+    { "id": "researcher", "type": "research", "provider": "pi", "model": "kimi-k2-thinking", "reasoning_effort": "high" },
     { "id": "writer", "type": "write", "provider": "claude", "model": "sonnet" }
   ]
 }
@@ -173,15 +173,19 @@ Workers can run on `claude` (default), `codex` (OpenAI Codex CLI), or `pi` (pi.d
 | `gpt-5.4-mini` | Fast/cheap — validators, simple tasks |
 | `gpt-5.3-codex` | Coding-focused (migrating to gpt-5.4) |
 
-### Pi model aliases
+### Pi models
+
+Pi is a **provider harness**, not a model. The actual model is determined by whichever provider is configured in your `pi` setup. Run `pi --list-models` to see what's available.
+
+**Example:** With the `kimi-coding` provider configured:
 
 | Model | Use case |
 |---|---|
-| `pi/sonnet` | Flagship reasoning |
-| `pi/haiku` | Fast/cheap — validators, simple tasks |
-| `pi/opus` | Deep reasoning — complex research |
+| `k2p6` | Flagship — default, strongest reasoning |
+| `kimi-for-coding` | Fast/cheap — validators, simple tasks |
+| `kimi-k2-thinking` | Deep reasoning — research workers |
 
-Pi model IDs may contain `/` (e.g., `pi/sonnet`). These are passed through directly to `pi -p --model`.
+Whatever string you put in `model` is passed straight through to `pi -p --model`. No aliases, no validation.
 
 ### Provider limitations vs Claude
 
