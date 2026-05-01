@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # lib/worker-spawn.sh — shared INNER_CMD builder for worker spawning
 #
-# Supports two providers:
+# Supports three providers:
 #   claude (default) — builds: cat prompt | claude -p --model X ...
 #   codex            — builds: cat prompt | codex exec - -m X --json ...
+#   pi               — builds: cat prompt | pi -p --mode json --model X ...
 #
 # Usage:
 #   source ../lib/worker-spawn.sh
@@ -21,7 +22,7 @@
 #     --session-jsonl "/path/to/session.jsonl" \
 #     --worker-dir "/path/to/worker/dir" \
 #     [--extra-exports "KEY=val KEY2=val2"] \
-#     [--provider "codex"] \
+#     [--provider "codex" | "pi"] \
 #     [--reasoning-effort "medium"] \
 #     [--codex-sandbox "workspace-write"] \
 #     [--codex-extra-flags "-c 'web_search=\"live\"'"] \
