@@ -74,7 +74,7 @@ The `ckpt` command arg is a **short label** (2-5 words), NOT the checkpoint cont
 
 ````markdown
 ```mermaid
-graph LR
+graph TD
     A[Starting state] --> B[What was done]
     B --> C[Current state]
     C --> D[Next steps]
