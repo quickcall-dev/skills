@@ -417,9 +417,9 @@ while true; do
   codex_extra=""
   [[ "${is_search}" == "true" ]] && codex_extra="-c 'web_search=\"live\"'"
 
-  # Pi tool allowlist (all built-ins + search if needed)
+  # Pi tool allowlist (all built-ins + web search tools if needed)
   PI_TOOLS="read,bash,edit,write,grep,find,ls"
-  [[ "${is_search}" == "true" ]] && PI_TOOLS="read,bash,edit,write,grep,find,ls,web_search"
+  [[ "${is_search}" == "true" ]] && PI_TOOLS="read,bash,edit,write,grep,find,ls,web_search,fetch_content,code_search,get_search_content"
 
   # Build command via shared lib/worker-spawn.sh
   log "Spawning ${PROVIDER} agent (model=${MODEL}, budget=\$${BUDGET_PER_ITER})..."

@@ -131,6 +131,15 @@ _build_pi_cmd() {
   cmd+=" --mode json"
   cmd+=" --model '${worker_model}'"
 
+  # Load pi-web-access extension if available (provides web_search, fetch_content, code_search, get_search_content)
+  local pi_ext="${PI_EXTENSION:-}"
+  if [[ -z "$pi_ext" && -f "$HOME/.npm-global/lib/node_modules/pi-web-access/index.ts" ]]; then
+    pi_ext="$HOME/.npm-global/lib/node_modules/pi-web-access/index.ts"
+  fi
+  if [[ -n "$pi_ext" ]]; then
+    cmd+=" --extension '${pi_ext}'"
+  fi
+
   # Pi uses --tools (allowlist), not --disallowed-tools (blocklist)
   # Prefer explicit PI_TOOLS from launch.sh, else build from disallowed blocklist
   local allowlist="${PI_TOOLS:-}"
@@ -158,7 +167,7 @@ _build_pi_cmd() {
 
 _build_pi_allowlist() {
   local disallowed="$1"
-  local all_tools="read,bash,edit,write,grep,find,ls"
+  local all_tools="read,bash,edit,write,grep,find,ls,web_search,fetch_content,code_search,get_search_content"
   # Normalize disallowed to lowercase, comma-separated
   local blocked
   blocked=$(echo "$disallowed" | tr '[:upper:]' '[:lower:]' | tr -d ' ' | tr ',' '\n')

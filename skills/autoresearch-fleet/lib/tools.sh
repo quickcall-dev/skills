@@ -33,7 +33,7 @@ get_pi_tools() {
     read-only)    echo "read,grep,find,ls" ;;
     write)        echo "read,edit,write,grep,find,ls" ;;
     code-run)     echo "read,bash,edit,write,grep,find,ls" ;;
-    research)     echo "read,bash,grep,find,ls" ;;
+    research)     echo "read,bash,grep,find,ls,web_search,fetch_content,code_search,get_search_content" ;;
     reviewer)     echo "read,edit,write,grep,find,ls" ;;
     orchestrator) echo "read,bash,grep,find,ls" ;;
     *)

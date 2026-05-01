@@ -15,7 +15,7 @@ declare -A MANIFEST
 MANIFEST["dag-fleet"]="logging.sh tools.sh worker-spawn.sh registry.sh dag.sh dag-viz.py reset.sh"
 MANIFEST["worktree-fleet"]="logging.sh tools.sh worker-spawn.sh registry.sh"
 MANIFEST["iterative-fleet"]="logging.sh tools.sh worker-spawn.sh registry.sh dag.sh"
-MANIFEST["autoresearch-fleet"]="logging.sh worker-spawn.sh registry.sh"
+MANIFEST["autoresearch-fleet"]="logging.sh tools.sh worker-spawn.sh registry.sh"
 
 # ---------------------------------------------------------------------------
 # Counters
