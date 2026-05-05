@@ -10,12 +10,29 @@ Works with **Claude Code**, **Cursor**, **GitHub Copilot**, **Gemini CLI**, **Op
 
 ## Install
 
+### Quick (Claude Code + Pi only, no prompts)
+
+```bash
+npx skills add quickcall-dev/skills --agent claude-code --agent pi -g -y
+```
+
+### Interactive (all agents, wizard-guided)
+
 ```bash
 # All skills
 npx skills add quickcall-dev/skills
 
 # Just one
 npx skills add quickcall-dev/skills --skill dag-fleet
+```
+
+### Update / refresh
+
+`npx skills add` is idempotent for symlinks. Re-run the quick command above to pull latest changes. If you installed before `skillPath` tracking existed, `npx skills update` will not work — use `add` instead.
+
+```bash
+# Add shell alias for one-command refresh
+alias skills-up='npx skills add quickcall-dev/skills --agent claude-code --agent pi -g -y'
 ```
 
 ## Skills
