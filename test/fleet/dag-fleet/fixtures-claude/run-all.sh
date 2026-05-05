@@ -191,12 +191,18 @@ run_L() {
   # Parallel second invocation — should be refused by the flock.
   bash "${SCRIPTS}/launch.sh" "$root" >"$root/launch2.out" 2>&1
   local rc=$?
-  local pid_file_ok=0
-  [[ -f "$root/.launch.pid" ]] && [[ "$(cat "$root/.launch.pid")" == "$lpid" ]] && pid_file_ok=1
-  if [[ "$rc" == "2" && "$pid_file_ok" == "1" ]]; then
-    record "L wedged-launcher fleet lock" PASS
+  # With HAS_DEPS>0 the supervisor fork overwrites .launch.pid with its own
+  # BASHPID.  The invariant is: second launch exits 2 AND .launch.pid points
+  # to a live process (parent or supervisor — both hold the flock).
+  local lock_pid="" lock_alive=0
+  if [[ -f "$root/.launch.pid" ]]; then
+    lock_pid=$(cat "$root/.launch.pid" 2>/dev/null | tr -d '[:space:]')
+    [[ -n "$lock_pid" ]] && kill -0 "$lock_pid" 2>/dev/null && lock_alive=1
+  fi
+  if [[ "$rc" == "2" && "$lock_alive" == "1" ]]; then
+    record "L wedged-launcher fleet lock" PASS "(lock_pid=$lock_pid)"
   else
-    record "L wedged-launcher fleet lock" FAIL "(rc=$rc pid_ok=$pid_file_ok expected_pid=$lpid actual_pid=$(cat "$root/.launch.pid" 2>/dev/null))"
+    record "L wedged-launcher fleet lock" FAIL "(rc=$rc lock_alive=$lock_alive lock_pid=${lock_pid:-none})"
     tail -5 "$root/launch2.out" 2>/dev/null || true
   fi
   wait "$lpid" 2>/dev/null || true
