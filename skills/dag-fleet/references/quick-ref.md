@@ -34,7 +34,7 @@ flowchart TD
 
 Scripts accept either an absolute fleet-root path or a fleet name (from `~/.claude/fleet-registry.json`).
 
-**Utility:** `python3 ${CLAUDE_SKILL_DIR}/lib/dag-viz.py <fleet.json> [--mermaid]` — preview DAG structure in terminal or as mermaid diagram.
+**Utility:** `python3 ${AGENTS_SKILLS_DIR}/lib/dag-viz.py <fleet.json> [--mermaid]` — preview DAG structure in terminal or as mermaid diagram.
 
 ## Worker Types
 

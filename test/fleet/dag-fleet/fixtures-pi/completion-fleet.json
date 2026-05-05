@@ -5,8 +5,8 @@
   "config": {
     "max_concurrent": 4,
     "provider": "pi",
-    "model": "kimi-coding/kimi-k2-thinking",
-    "fallback_model": "kimi-coding/kimi-k2-thinking",
+    "model": "kimi-for-coding",
+    "fallback_model": "kimi-for-coding",
     "launch_delay_seconds": 0,
     "max_budget_fleet": 0
   },

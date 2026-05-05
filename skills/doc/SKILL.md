@@ -2,7 +2,7 @@
 name: doc
 description: Create and manage structured documentation — experiments, plans, findings, checkpoints, research, learnings. Config-driven, parallel-safe.
 argument-hint: "[start|expt|plan|finding|ckpt|research|review|learn|list|status|resume] [args]"
-allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob, Grep
+allowed-tools: Bash(bash ${AGENTS_SKILLS_DIR}/scripts/*), Read, Write, Glob, Grep
 license: Apache-2.0
 metadata:
   author: Sagar Sarkale
@@ -17,17 +17,17 @@ Config-driven documentation scaffolding. Config lives inside the skill at `confi
 
 | Command | What to run |
 |---------|-------------|
-| start \<name\> | `bash ${CLAUDE_SKILL_DIR}/scripts/start.sh "<name>"` |
-| expt \<name\> | `bash ${CLAUDE_SKILL_DIR}/scripts/expt.sh "<name>"` |
-| plan \<index\> \<title\> | `bash ${CLAUDE_SKILL_DIR}/scripts/plan.sh <index> "<title>"` |
-| finding \<index\> \<title\> | `bash ${CLAUDE_SKILL_DIR}/scripts/finding.sh <index> "<title>"` |
-| ckpt \<index\> \<description\> | `bash ${CLAUDE_SKILL_DIR}/scripts/ckpt.sh <index> "<description>"` |
-| research \<index\> \<topic\> | `bash ${CLAUDE_SKILL_DIR}/scripts/research.sh <index> "<topic>"` |
-| review \<index\> \<title\> | `bash ${CLAUDE_SKILL_DIR}/scripts/review.sh <index> "<title>"` |
-| learn \<index\> \<domain\> \<title\> | `bash ${CLAUDE_SKILL_DIR}/scripts/learn.sh <index> "<domain>" "<title>"` |
-| list | `bash ${CLAUDE_SKILL_DIR}/scripts/list.sh` |
-| status \<index\> | `bash ${CLAUDE_SKILL_DIR}/scripts/status.sh <index>` |
-| resume \<index\> | `bash ${CLAUDE_SKILL_DIR}/scripts/resume.sh <index>` |
+| start \<name\> | `bash ${AGENTS_SKILLS_DIR}/scripts/start.sh "<name>"` |
+| expt \<name\> | `bash ${AGENTS_SKILLS_DIR}/scripts/expt.sh "<name>"` |
+| plan \<index\> \<title\> | `bash ${AGENTS_SKILLS_DIR}/scripts/plan.sh <index> "<title>"` |
+| finding \<index\> \<title\> | `bash ${AGENTS_SKILLS_DIR}/scripts/finding.sh <index> "<title>"` |
+| ckpt \<index\> \<description\> | `bash ${AGENTS_SKILLS_DIR}/scripts/ckpt.sh <index> "<description>"` |
+| research \<index\> \<topic\> | `bash ${AGENTS_SKILLS_DIR}/scripts/research.sh <index> "<topic>"` |
+| review \<index\> \<title\> | `bash ${AGENTS_SKILLS_DIR}/scripts/review.sh <index> "<title>"` |
+| learn \<index\> \<domain\> \<title\> | `bash ${AGENTS_SKILLS_DIR}/scripts/learn.sh <index> "<domain>" "<title>"` |
+| list | `bash ${AGENTS_SKILLS_DIR}/scripts/list.sh` |
+| status \<index\> | `bash ${AGENTS_SKILLS_DIR}/scripts/status.sh <index>` |
+| resume \<index\> | `bash ${AGENTS_SKILLS_DIR}/scripts/resume.sh <index>` |
 
 **`start` = scaffold docs/ + create experiment.** Use this when beginning new work.
 **`expt` = create experiment only.** Use when docs/ already exists.

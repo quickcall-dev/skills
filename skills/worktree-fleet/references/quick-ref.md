@@ -26,11 +26,11 @@ flowchart TD
 
 ```bash
 # Typical run
-bash ${CLAUDE_SKILL_DIR}/scripts/launch.sh $FLEET_ROOT --dry-run
-bash ${CLAUDE_SKILL_DIR}/scripts/launch.sh $FLEET_ROOT
-bash ${CLAUDE_SKILL_DIR}/scripts/status.sh $FLEET_ROOT
-bash ${CLAUDE_SKILL_DIR}/scripts/merge.sh $FLEET_ROOT
-bash ${CLAUDE_SKILL_DIR}/scripts/cleanup.sh $FLEET_ROOT --force
+bash ${AGENTS_SKILLS_DIR}/scripts/launch.sh $FLEET_ROOT --dry-run
+bash ${AGENTS_SKILLS_DIR}/scripts/launch.sh $FLEET_ROOT
+bash ${AGENTS_SKILLS_DIR}/scripts/status.sh $FLEET_ROOT
+bash ${AGENTS_SKILLS_DIR}/scripts/merge.sh $FLEET_ROOT
+bash ${AGENTS_SKILLS_DIR}/scripts/cleanup.sh $FLEET_ROOT --force
 ```
 
 ## Worker Type Override

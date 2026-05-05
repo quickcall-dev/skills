@@ -109,6 +109,19 @@ if [[ ! -f "${FLEET_JSON}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Fleet-root .gitignore — prevent log artifacts from polluting git status
+# ---------------------------------------------------------------------------
+GITIGNORE="${FLEET_ROOT}/.gitignore"
+if [[ ! -f "${GITIGNORE}" ]]; then
+  cat > "${GITIGNORE}" <<'EOF'
+# Fleet-generated artifacts — keep repo clean
+*.jsonl
+*.out
+*.out.last
+EOF
+fi
+
+# ---------------------------------------------------------------------------
 # Single-launcher lock — prevents the "4 wedged launch.sh processes" scenario
 # from problems.md #3. Second invocation exits cleanly with a clear pointer
 # at the live pid.

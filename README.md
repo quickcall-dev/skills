@@ -126,13 +126,29 @@ skills/
 ├── dag-fleet/              # DAG-ordered parallel workers
 │   ├── SKILL.md
 │   ├── scripts/            # 7 orchestration scripts
-│   ├── lib/                # Shared fleet libraries
+│   ├── lib/                # Shared fleet libraries (copied from _canonical)
 │   └── references/
 ├── worktree-fleet/         # Git-worktree isolated workers
 ├── iterative-fleet/        # Reviewer-gated cycles
 ├── autoresearch-fleet/     # Autonomous research loop
 └── fleet-plan/             # Fleet config generator
 ```
+
+### Shared Libraries (`_canonical/`)
+
+Fleet skills share common bash libraries via `_canonical/fleet-lib/`. This is the single source of truth for:
+
+| File | Purpose |
+|------|---------|
+| `logging.sh` | Colorized log helpers (`info`, `warn`, `error`, `die`) |
+| `tools.sh` | Tool validation, fleet ID sanitization |
+| `worker-spawn.sh` | Per-worker tmux spawning, provider-specific CLI construction |
+| `registry.sh` | Fleet name → root mapping for `kill.sh`/`status.sh` resolution |
+| `dag.sh` | Kahn's algorithm topo sort + cycle detection |
+| `dag-viz.py` | ASCII / mermaid DAG visualization |
+| `reset.sh` | Fleet reset logic (`--soft` / `--hard`) |
+
+**Sync:** `bash scripts/sync-lib.sh` copies canonical files into each skill's `lib/` directory. Run it after editing any file in `_canonical/fleet-lib/`. Skill-specific scripts (e.g. `launch.sh`, `kill.sh`) live directly in `skills/<name>/scripts/` — they are NOT in `_canonical`.
 
 ## Testing
 

@@ -31,7 +31,7 @@ flowchart TD
 | `resume.sh` | `<fleet-root>` | Remove `.paused` — orchestrator continues |
 | `kill.sh` | `<fleet-root> all [--force]` | Hard stop: kill tmux session, sweep orphans, unregister |
 
-Run all scripts as: `bash ${CLAUDE_SKILL_DIR}/scripts/<script> <fleet-root>`
+Run all scripts as: `bash ${AGENTS_SKILLS_DIR}/scripts/<script> <fleet-root>`
 
 ## Verdict Interface
 

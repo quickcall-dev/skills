@@ -2,7 +2,7 @@
 name: worktree-fleet
 description: Independence-validated parallel fleet that runs each worker (claude -p, codex exec, or pi -p) in its own git worktree. Use when tasks touch non-overlapping files and you need merge-safe isolation (each worker on its own branch). For DAG-ordered one-shot workers with budgets, use dag-fleet. For headless iteration with a reviewer loop, use iterative-fleet.
 argument-hint: "[launch|status|merge|cleanup] [args]"
-allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
+allowed-tools: Bash(bash ${AGENTS_SKILLS_DIR}/scripts/*), Read, Write, Glob
 model: claude-sonnet-4-6
 license: Apache-2.0
 metadata:
@@ -101,11 +101,11 @@ New fields vs dag-fleet:
    ```
    Save ALL output to $FLEET_ROOT/workers/{id}/output/ — use absolute paths.
    ```
-4. Run: `bash ${CLAUDE_SKILL_DIR}/scripts/launch.sh $FLEET_ROOT`
+4. Run: `bash ${AGENTS_SKILLS_DIR}/scripts/launch.sh $FLEET_ROOT`
 5. `--dry-run` validates independence without creating worktrees or spawning workers.
 6. **ALWAYS tell the user** the exact status command so they can monitor manually:
    ```
-   bash ${CLAUDE_SKILL_DIR}/scripts/status.sh <fleet-name-or-root>
+   bash ${AGENTS_SKILLS_DIR}/scripts/status.sh <fleet-name-or-root>
    ```
    This is mandatory after every launch. The user must be able to check status without asking you.
 

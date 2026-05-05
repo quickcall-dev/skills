@@ -2,7 +2,7 @@
 name: dag-fleet
 description: Persistent, budgeted, DAG-ordered runner for parallel `claude -p`, `codex exec`, or `pi -p` workers in tmux. Use ONLY when you need persistence across sessions, per-worker budget caps, dependency ordering, or mixed models/providers per worker. For ad-hoc parallel sub-agents inside a live conversation, use Claude Code's built-in Agent tool instead.
 argument-hint: "[launch|relaunch-worker|status|kill|report] [args]"
-allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
+allowed-tools: Bash(bash ${AGENTS_SKILLS_DIR}/scripts/*), Read, Write, Glob
 model: claude-sonnet-4-6
 license: Apache-2.0
 metadata:
@@ -53,7 +53,7 @@ If none of those apply, **stop reading this skill** and use the Agent tool.
 
 | Utility | Purpose | Usage |
 |---------|---------|-------|
-| `dag-viz.py` | Visualize fleet DAG structure (ASCII or mermaid) | `python3 ${CLAUDE_SKILL_DIR}/lib/dag-viz.py <fleet.json> [--mermaid]` |
+| `dag-viz.py` | Visualize fleet DAG structure (ASCII or mermaid) | `python3 ${AGENTS_SKILLS_DIR}/lib/dag-viz.py <fleet.json> [--mermaid]` |
 
 All scripts accept either an absolute fleet-root path **or** a fleet name (resolved via `~/.claude/fleet-registry.json`, populated automatically by `launch.sh`).
 
@@ -69,11 +69,11 @@ When the user asks you to launch a fleet:
    Save ALL output files to $FLEET_ROOT/workers/{id}/output/ — use absolute paths.
    ```
    (Substitute the real fleet root and worker id.)
-5. **Run:** `bash ${CLAUDE_SKILL_DIR}/scripts/launch.sh $FLEET_ROOT`
+5. **Run:** `bash ${AGENTS_SKILLS_DIR}/scripts/launch.sh $FLEET_ROOT`
 6. **Do NOT** write your own tmux/claude commands. `launch.sh` handles topo sort, tmux session creation, per-worker spawning, budgets, and the registry.
 7. **ALWAYS tell the user** the exact status command so they can monitor manually:
    ```
-   bash ${CLAUDE_SKILL_DIR}/scripts/status.sh <fleet-name-or-root>
+   bash ${AGENTS_SKILLS_DIR}/scripts/status.sh <fleet-name-or-root>
    ```
    This is mandatory after every launch. The user must be able to check status without asking you.
 
@@ -82,7 +82,7 @@ When the user asks you to launch a fleet:
 The user has a finished fleet and wants to add 1-2 sources / change one worker's instructions:
 
 1. Edit `$FLEET_ROOT/workers/{id}/prompt.md` (add the new sources / instructions)
-2. Run `bash ${CLAUDE_SKILL_DIR}/scripts/relaunch-worker.sh <fleet-name> {id}`
+2. Run `bash ${AGENTS_SKILLS_DIR}/scripts/relaunch-worker.sh <fleet-name> {id}`
 3. The worker's old `session.jsonl` is rotated to `.bak`, a fresh tmux window spawns, other workers are untouched
 4. **The fleet's tmux session must still exist.** If it's been killed, the user must `launch.sh --force-relaunch` the whole fleet — `relaunch-worker.sh` only works against a live fleet session.
 
@@ -102,7 +102,7 @@ There is no `steer.sh`. There is no mid-flight redirection. The intentional work
 Use when the fleet ran partially (bad prompts, wrong models, hit a bug) and you want to re-launch from scratch without state collision.
 
 ```
-bash ${CLAUDE_SKILL_DIR}/scripts/reset.sh <FLEET_ROOT> [--soft|--hard] [--dry-run] [--force]
+bash ${AGENTS_SKILLS_DIR}/scripts/reset.sh <FLEET_ROOT> [--soft|--hard] [--dry-run] [--force]
 ```
 
 **Preserved (both levels):** `fleet.json` structure, `workers/{id}/prompt.md`.

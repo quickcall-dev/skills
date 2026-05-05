@@ -2,7 +2,7 @@
 name: iterative-fleet
 description: Reviewer-gated iterative fleet for headless `claude -p`, `codex exec`, or `pi -p` workers that run in cycles until a designated reviewer approves the output. Use when the work needs multiple rounds of iteration with a quality gate — a reviewer worker reads all worker logs, writes a verdict (lgtm | iterate | escalate), and the orchestrator decides whether to continue, pause, or stop. NEVER kills or restarts workers automatically; the operator owns all kill/pause decisions.
 argument-hint: "[launch|status|pause|resume|kill] [args]"
-allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
+allowed-tools: Bash(bash ${AGENTS_SKILLS_DIR}/scripts/*), Read, Write, Glob
 model: claude-opus-4-6
 license: Apache-2.0
 metadata:
@@ -156,14 +156,14 @@ verdict: iterate
 
 1. Create `$FLEET_ROOT/fleet.json` with workers including exactly one `type: "reviewer"` worker (with `depends_on` pointing to builder workers)
 2. Create `$FLEET_ROOT/workers/<id>/prompt.md` for each worker
-3. Run `bash ${CLAUDE_SKILL_DIR}/scripts/launch.sh $FLEET_ROOT`
+3. Run `bash ${AGENTS_SKILLS_DIR}/scripts/launch.sh $FLEET_ROOT`
 4. **ALWAYS tell the user** the exact status command so they can monitor manually:
    ```
-   bash ${CLAUDE_SKILL_DIR}/scripts/status.sh $FLEET_ROOT
+   bash ${AGENTS_SKILLS_DIR}/scripts/status.sh $FLEET_ROOT
    ```
    This is mandatory after every launch. The user must be able to check status without asking you.
-5. Pause if needed: `bash ${CLAUDE_SKILL_DIR}/scripts/pause.sh $FLEET_ROOT`
-6. Hard stop: `bash ${CLAUDE_SKILL_DIR}/scripts/kill.sh $FLEET_ROOT all`
+5. Pause if needed: `bash ${AGENTS_SKILLS_DIR}/scripts/pause.sh $FLEET_ROOT`
+6. Hard stop: `bash ${AGENTS_SKILLS_DIR}/scripts/kill.sh $FLEET_ROOT all`
 
 ## Rationalizations to reject
 

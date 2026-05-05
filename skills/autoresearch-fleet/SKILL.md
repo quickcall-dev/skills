@@ -2,7 +2,7 @@
 name: autoresearch-fleet
 description: Karpathy-inspired autonomous research loop. Agent edits one file, evals, keeps or discards, repeats. Plateau-triggered web search breaks through ceilings. Git as state machine. Runs until stopped or budget exhausted. Supports claude, codex, and pi providers.
 argument-hint: "[launch|status|view|report|pause|resume|kill] <fleet-root>"
-allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*), Read, Write, Glob
+allowed-tools: Bash(bash ${AGENTS_SKILLS_DIR}/scripts/*), Read, Write, Glob
 model: claude-opus-4-6
 license: Apache-2.0
 metadata:
@@ -161,8 +161,8 @@ Then set `"eval_command": "bash bench.sh"` in fleet.json.
 ### Setup
 
 1. Create fleet root with `fleet.json` + `program.md` (+ `bench.sh` if you wrote one)
-2. `bash ${CLAUDE_SKILL_DIR}/scripts/launch.sh <fleet-root>` (git init + results.tsv auto-created)
-3. `bash ${CLAUDE_SKILL_DIR}/scripts/status.sh <fleet-root>` to monitor
+2. `bash ${AGENTS_SKILLS_DIR}/scripts/launch.sh <fleet-root>` (git init + results.tsv auto-created)
+3. `bash ${AGENTS_SKILLS_DIR}/scripts/status.sh <fleet-root>` to monitor
 
 ## Available scripts
 
