@@ -241,13 +241,29 @@ print(last or "—")
   fi
   echo ""
 
-  # Per-iteration cost breakdown (last 5)
-  echo -e "${BOLD}Recent Iteration Costs:${NC}"
+  # Per-iteration cost + duration breakdown (last 5)
+  echo -e "${BOLD}Recent Iterations:${NC}"
   local found_costs=0
   for jsonl in $(ls -1 "${FLEET_ROOT}"/logs/session-iter-*.jsonl 2>/dev/null | sort -t- -k3 -n | tail -5); do
     [[ -f "${jsonl}" ]] || continue
     local iter_num cost_val
     iter_num=$(basename "${jsonl}" | sed 's/session-iter-\(.*\)\.jsonl/\1/')
+
+    # Iteration duration: file birth → last write
+    local ctime mtime iter_dur=0 iter_dur_str="—"
+    ctime=$(stat -c %W "${jsonl}" 2>/dev/null || echo 0)
+    [[ "$ctime" == "0" ]] && ctime=$(stat -c %Y "${jsonl}" 2>/dev/null || echo "${now}")
+    mtime=$(stat -c %Y "${jsonl}" 2>/dev/null || stat -f %m "${jsonl}" 2>/dev/null || echo "${now}")
+    iter_dur=$((mtime - ctime))
+    [[ $iter_dur -lt 0 ]] && iter_dur=0
+    if [[ $iter_dur -lt 60 ]]; then
+      iter_dur_str="${iter_dur}s"
+    elif [[ $iter_dur -lt 3600 ]]; then
+      iter_dur_str="$((iter_dur / 60))m $((iter_dur % 60))s"
+    else
+      iter_dur_str="$((iter_dur / 3600))h $((iter_dur % 3600 / 60))m"
+    fi
+
     if grep -q '"type":"result"' "${jsonl}" 2>/dev/null; then
       cost_val=$(grep '"type":"result"' "${jsonl}" 2>/dev/null | tail -1 | \
         jq -r '.total_cost_usd // 0' 2>/dev/null || echo "0")
@@ -283,7 +299,7 @@ print(f'{total:.6f}')
 " "${jsonl}" 2>/dev/null || echo "0")
     fi
     cost_val=$(awk "BEGIN {printf \"%.2f\", ${cost_val}}")
-    printf "  iter %-4s  \$%s\n" "${iter_num}" "${cost_val}"
+    printf "  iter %-4s  %-10s  \$%s\n" "${iter_num}" "${iter_dur_str}" "${cost_val}"
     found_costs=1
   done
   [[ ${found_costs} -eq 0 ]] && echo -e "  ${GRAY}(no session logs yet)${NC}"

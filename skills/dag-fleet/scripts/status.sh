@@ -104,7 +104,7 @@ show_status() {
   done
   (( id_w < 12 )) && id_w=12
   (( model_w < 10 )) && model_w=10
-  local rule_w=$(( id_w + model_w + 60 ))
+  local rule_w=$(( id_w + model_w + 72 ))
   (( rule_w < 100 )) && rule_w=100
 
   # Fleet elapsed time from launched_at
@@ -139,8 +139,8 @@ show_status() {
     echo -e "Fleet root: ${CYAN}${FLEET_ROOT}${NC}"
     [[ "$elapsed_str" != "n/a" ]] && echo -e "Elapsed: ${BOLD}${elapsed_str}${NC}"
     echo ""
-    printf "${BOLD}${CYAN}%-${id_w}s  %-10s  %-${model_w}s  %-16s  %9s  %7s  %-s${NC}\n" \
-      "ID" "STATUS" "MODEL" "LAST ACTIVITY" "COST" "RETRIES" "LAST MSG"
+    printf "${BOLD}${CYAN}%-${id_w}s  %-10s  %-${model_w}s  %-10s  %-16s  %9s  %7s  %-s${NC}\n" \
+      "ID" "STATUS" "MODEL" "ELAPSED" "LAST ACTIVITY" "COST" "RETRIES" "LAST MSG"
     printf "${BOLD}"; printf '─%.0s' $(seq 1 "$rule_w"); printf "${NC}\n"
   fi
 
@@ -150,7 +150,7 @@ show_status() {
     local log
     log=$(_resolve_log "$wid")
     local status_file="${FLEET_ROOT}/workers/${wid}/status.json"
-    local status="PENDING" model="?" task="" cost="0" retries=0 ago_str="n/a"
+    local status="PENDING" model="?" task="" cost="0" retries=0 ago_str="n/a" elapsed_str="n/a"
 
     # Get task/model from fleet.json
     if [[ -f "$FLEET_JSON" ]]; then
@@ -369,11 +369,23 @@ PYEOF
         fi
       fi
 
-      # Last activity from mtime
-      local mtime
+      # Per-worker elapsed: file birth → last write = actual session duration
+      local ctime mtime elapsed=0
+      ctime=$(stat -c %W "$log" 2>/dev/null || echo 0)
+      [[ "$ctime" == "0" ]] && ctime=$(stat -c %Y "$log" 2>/dev/null || echo "$now")
       mtime=$(stat -c %Y "$log" 2>/dev/null || stat -f %m "$log" 2>/dev/null || echo "$now")
-      local ago=$((now - mtime))
+      elapsed=$((mtime - ctime))
+      [[ $elapsed -lt 0 ]] && elapsed=0
+      if [[ $elapsed -lt 60 ]]; then
+        elapsed_str="${elapsed}s"
+      elif [[ $elapsed -lt 3600 ]]; then
+        elapsed_str="$((elapsed / 60))m $((elapsed % 60))s"
+      else
+        elapsed_str="$((elapsed / 3600))h $((elapsed % 3600 / 60))m"
+      fi
 
+      # Last activity from mtime
+      local ago=$((now - mtime))
       if [[ $ago -lt 60 ]]; then
         ago_str="${ago}s ago"
       elif [[ $ago -lt 3600 ]]; then
@@ -495,8 +507,8 @@ for line in sys.stdin:
       [[ "$first_json" == "true" ]] && first_json=false || printf ",\n"
       local last_msg_json
       last_msg_json=$(printf '%s' "$last_msg_short" | jq -Rs . 2>/dev/null || echo '""')
-      printf '    {"id":"%s","status":"%s","model":"%s","last_activity":"%s","cost":%s,"retries":%s,"last_msg":%s}' \
-        "$wid" "$status" "$model" "$ago_str" "${cost:-0}" "$retries" "$last_msg_json"
+      printf '    {"id":"%s","status":"%s","model":"%s","elapsed":"%s","last_activity":"%s","cost":%s,"retries":%s,"last_msg":%s}' \
+        "$wid" "$status" "$model" "$elapsed_str" "$ago_str" "${cost:-0}" "$retries" "$last_msg_json"
     else
       local color="$GRAY"
       case "$status" in
@@ -508,8 +520,8 @@ for line in sys.stdin:
       esac
       local cost_fmt
       cost_fmt=$(printf '$%.2f' "${cost:-0}" 2>/dev/null || echo "\$$cost")
-      printf "${color}%-${id_w}s  %-10s  %-${model_w}s  %-16s  %9s  %7s  %-s${NC}\n" \
-        "$wid" "$status" "$model" "$ago_str" "$cost_fmt" "$retries" "$last_msg_short"
+      printf "${color}%-${id_w}s  %-10s  %-${model_w}s  %-10s  %-16s  %9s  %7s  %-s${NC}\n" \
+        "$wid" "$status" "$model" "$elapsed_str" "$ago_str" "$cost_fmt" "$retries" "$last_msg_short"
 
       # -v: extra sub-line per worker — lines/tail/outputs (cribbed from temp-status.sh)
       if [[ "$OPT_VERBOSE" == "true" && -f "$log" ]]; then

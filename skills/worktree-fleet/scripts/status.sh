@@ -131,9 +131,9 @@ show_status() {
     echo -e "Fleet root: ${CYAN}${FLEET_ROOT}${NC}"
     [[ "$elapsed_str" != "n/a" ]] && echo -e "Elapsed: ${BOLD}${elapsed_str}${NC}"
     echo ""
-    printf "${BOLD}${CYAN}%-${id_w}s  %-${branch_w}s  %-10s  %-16s  %9s  %-s${NC}\n" \
-      "ID" "BRANCH" "STATUS" "LAST ACTIVITY" "COST" "LAST MSG"
-    printf "${BOLD}"; printf '─%.0s' $(seq 1 100); printf "${NC}\n"
+    printf "${BOLD}${CYAN}%-${id_w}s  %-${branch_w}s  %-10s  %-10s  %-16s  %9s  %-s${NC}\n" \
+      "ID" "BRANCH" "ELAPSED" "STATUS" "LAST ACTIVITY" "COST" "LAST MSG"
+    printf "${BOLD}"; printf '─%.0s' $(seq 1 112); printf "${NC}\n"
   fi
 
   local first_json=true
@@ -142,7 +142,7 @@ show_status() {
     local log
     log=$(_resolve_log "$wid")
     local status_file="${FLEET_ROOT}/workers/${wid}/status.json"
-    local status="PENDING" branch="?" cost="0" ago_str="n/a"
+    local status="PENDING" branch="?" cost="0" ago_str="n/a" elapsed_str="n/a"
 
     if [[ -f "${FLEET_JSON}" ]]; then
       branch=$(jq -r ".workers[] | select(.id==\"${wid}\") | .branch // \"?\"" "${FLEET_JSON}" 2>/dev/null)
@@ -265,10 +265,23 @@ PYEOF
         [[ -z "${cost}" ]] && cost="0"
       fi
 
-      # Last activity age
-      local mtime ago
+      # Per-worker elapsed: file birth → last write = actual session duration
+      local ctime mtime elapsed=0
+      ctime=$(stat -c %W "${log}" 2>/dev/null || echo 0)
+      [[ "$ctime" == "0" ]] && ctime=$(stat -c %Y "${log}" 2>/dev/null || echo "${now}")
       mtime=$(stat -c %Y "${log}" 2>/dev/null || stat -f %m "${log}" 2>/dev/null || echo "${now}")
-      ago=$((now - mtime))
+      elapsed=$((mtime - ctime))
+      [[ $elapsed -lt 0 ]] && elapsed=0
+      if [[ $elapsed -lt 60 ]]; then
+        elapsed_str="${elapsed}s"
+      elif [[ $elapsed -lt 3600 ]]; then
+        elapsed_str="$((elapsed / 60))m $((elapsed % 60))s"
+      else
+        elapsed_str="$((elapsed / 3600))h $((elapsed % 3600 / 60))m"
+      fi
+
+      # Last activity age
+      local ago=$((now - mtime))
       if [[ $ago -lt 60 ]]; then
         ago_str="${ago}s ago"
       elif [[ $ago -lt 3600 ]]; then
@@ -341,8 +354,8 @@ for line in sys.stdin:
       [[ "${first_json}" == "true" ]] && first_json=false || printf ",\n"
       local last_msg_json
       last_msg_json=$(printf '%s' "${last_msg_short}" | jq -Rs . 2>/dev/null || echo '""')
-      printf '    {"id":"%s","branch":"%s","status":"%s","last_activity":"%s","cost":%s,"last_msg":%s}' \
-        "${wid}" "${branch}" "${status}" "${ago_str}" "${cost:-0}" "${last_msg_json}"
+      printf '    {"id":"%s","branch":"%s","status":"%s","elapsed":"%s","last_activity":"%s","cost":%s,"last_msg":%s}' \
+        "${wid}" "${branch}" "${status}" "${elapsed_str}" "${ago_str}" "${cost:-0}" "${last_msg_json}"
     else
       local color="${GRAY}"
       case "${status}" in
@@ -353,8 +366,8 @@ for line in sys.stdin:
       esac
       local cost_fmt
       cost_fmt=$(printf '$%.2f' "${cost:-0}" 2>/dev/null || echo "\$${cost}")
-      printf "${color}%-${id_w}s  %-${branch_w}s  %-10s  %-16s  %9s  %-s${NC}\n" \
-        "${wid}" "${branch}" "${status}" "${ago_str}" "${cost_fmt}" "${last_msg_short}"
+      printf "${color}%-${id_w}s  %-${branch_w}s  %-10s  %-10s  %-16s  %9s  %-s${NC}\n" \
+        "${wid}" "${branch}" "${elapsed_str}" "${status}" "${ago_str}" "${cost_fmt}" "${last_msg_short}"
     fi
   done
 
