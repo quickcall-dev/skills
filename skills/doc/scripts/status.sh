@@ -44,7 +44,7 @@ for subdir in plans findings checkpoints research; do
   count=$(find "$dir" -name "*.md" -type f 2>/dev/null | wc -l)
   if [[ $count -gt 0 ]]; then
     echo "  $subdir/"
-    find "$dir" -name "*.md" -type f -printf "    %f\n" 2>/dev/null | sort
+    find "$dir" -name "*.md" -type f 2>/dev/null | sed 's|.*/|    |' | sort
   fi
 done
 

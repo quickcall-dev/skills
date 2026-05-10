@@ -52,7 +52,7 @@ finding_count=$(find "$EXPT_PATH/findings" -name "*.md" -type f 2>/dev/null | wc
 if [[ $finding_count -gt 0 ]]; then
   echo ""
   echo "--- Findings ($finding_count) ---"
-  find "$EXPT_PATH/findings" -name "*.md" -type f -printf "  %f\n" 2>/dev/null | sort
+  find "$EXPT_PATH/findings" -name "*.md" -type f 2>/dev/null | sed 's|.*/|  |' | sort
 fi
 
 echo ""

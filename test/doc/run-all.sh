@@ -660,6 +660,47 @@ run_D19() {
 }
 
 # ---------------------------------------------------------------------------
+# D20: resume.sh and status.sh list findings on BSD find (no GNU -printf)
+# ---------------------------------------------------------------------------
+run_D20() {
+  local root; root=$(mkroot D20)
+  cd "$root"
+  bash "${SCRIPTS}/start.sh" "findings-test" >/dev/null 2>&1
+
+  # Create two findings manually (script would work too, but direct is faster)
+  mkdir -p "$root/docs/experiments/001-findings-test/findings"
+  echo "# Bug A" > "$root/docs/experiments/001-findings-test/findings/01-bug.md"
+  echo "# Fix B" > "$root/docs/experiments/001-findings-test/findings/02-fix.md"
+
+  # Update meta finding_count
+  python3 -c "
+import json
+m = json.load(open('$root/docs/experiments/001-findings-test/.meta.json'))
+m['finding_count'] = 2
+json.dump(m, open('$root/docs/experiments/001-findings-test/.meta.json', 'w'), indent=2)
+"
+
+  local out_resume out_status
+  out_resume=$(bash "${SCRIPTS}/resume.sh" 1 2>&1)
+  out_status=$(bash "${SCRIPTS}/status.sh" 1 2>&1)
+
+  local ok=1
+  echo "$out_resume" | grep -q "01-bug.md" || ok=0
+  echo "$out_resume" | grep -q "02-fix.md" || ok=0
+  echo "$out_status" | grep -q "01-bug.md" || ok=0
+  echo "$out_status" | grep -q "02-fix.md" || ok=0
+
+  if [[ $ok -eq 1 ]]; then
+    record "D20 findings-listed-bsd-find" PASS
+  else
+    record "D20 findings-listed-bsd-find" FAIL
+  fi
+
+  cd /tmp
+  cleanup_root "$root"
+}
+
+# ---------------------------------------------------------------------------
 # Run all
 # ---------------------------------------------------------------------------
 run_D1
@@ -681,6 +722,7 @@ run_D16
 run_D17
 run_D18
 run_D19
+run_D20
 
 echo ""
 echo "============================================================"
