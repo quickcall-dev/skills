@@ -22,6 +22,7 @@ MODEL="fake-pi-model"
 TOOLS=""
 THINKING="medium"
 SESSION_DIR=""
+SESSION_NAME=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -31,10 +32,20 @@ while [[ $# -gt 0 ]]; do
     --tools|-t) TOOLS="$2"; shift 2 ;;
     --thinking) THINKING="$2"; shift 2 ;;
     --session-dir) SESSION_DIR="$2"; shift 2 ;;
+    --session) SESSION_NAME="$2"; shift 2 ;;
     --no-session|--no-tools|--no-builtin-tools) shift ;;
     *) shift ;;
   esac
 done
+
+# Mimic real pi: --session requires a pre-existing session file
+if [[ -n "$SESSION_NAME" && -n "$SESSION_DIR" ]]; then
+  SESSION_FILE="${SESSION_DIR}/${SESSION_NAME}.jsonl"
+  if [[ ! -f "$SESSION_FILE" ]]; then
+    echo "No session found matching '${SESSION_NAME}'" >&2
+    exit 1
+  fi
+fi
 
 # Drain stdin (the prompt is piped in)
 cat >/dev/null 2>&1 || true
@@ -46,14 +57,20 @@ CWD="${PWD}"
 # Write session file if session-dir provided
 if [[ -n "$SESSION_DIR" ]]; then
   mkdir -p "$SESSION_DIR"
-  SESSION_FILE="${SESSION_DIR}/${TS}_${SESSION_ID}.jsonl"
+  if [[ -n "$SESSION_NAME" ]]; then
+    # Resume / append to the pre-created session file
+    SESSION_FILE="${SESSION_DIR}/${SESSION_NAME}.jsonl"
+  else
+    SESSION_FILE="${SESSION_DIR}/${TS}_${SESSION_ID}.jsonl"
+  fi
   exec > >(tee "$SESSION_FILE")
   exec 2>&1
 fi
 
-# session header
+# session header — use SESSION_NAME when resuming a named session
+SESSION_HDR_ID="${SESSION_NAME:-$SESSION_ID}"
 printf '{"type":"session","version":3,"id":"%s","timestamp":"%s","cwd":"%s"}\n' \
-  "$SESSION_ID" "$TS" "$CWD"
+  "$SESSION_HDR_ID" "$TS" "$CWD"
 
 # model_change
 printf '{"type":"model_change","id":"mc1","parentId":null,"timestamp":"%s","provider":"fake-pi","modelId":"%s"}\n' \

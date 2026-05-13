@@ -167,7 +167,8 @@ run_P5() {
   bash "${SCRIPTS}/launch.sh" "$root" >"$root/launch.out" 2>&1 &
   local lpid=$!
   wait "$lpid" 2>/dev/null || true
-  sleep 35
+  # DAG + 30s keep-pane-open + mixed providers needs ~50s for all DONE
+  sleep 55
   local done_count; done_count=$(bash "${SCRIPTS}/status.sh" "$root" --json 2>/dev/null | jq '[.workers[] | select(.status == "DONE")] | length')
   local claude_dis; claude_dis=$(grep -c -- '--disallowed-tools' "$root/workers/a/.run.sh" 2>/dev/null)
   local pi_tools; pi_tools=$(grep -c -- '--tools' "$root/workers/c/.run.sh" 2>/dev/null)
@@ -230,7 +231,7 @@ run_P8() {
   bash "${FIXTURES_DIR}/setup-fleet.sh" completion "$root" >/dev/null
   mkdir -p "$root/workers/w1/.pi-sessions"
   cat > "$root/workers/w1/.pi-sessions/2026-05-01T19-35-36-742Z_test.jsonl" <<'JSONL'
-{"type":"message","id":"msg1","timestamp":"2026-05-01T19:35:36Z","message":{"role":"assistant","content":[{"type":"text","text":"Starting task"}],"api":"anthropic-messages","provider":"kimi-coding","model":"k2p6","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"toolUse","timestamp":1777664324000}}
+{"type":"message","id":"msg1","timestamp":"2026-05-01T19:35:36Z","message":{"role":"assistant","content":[{"type":"text","text":"Starting task"}],"api":"anthropic-messages","provider":"kimi-coding","model":"kimi-for-coding","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"toolUse","timestamp":1777664324000}}
 JSONL
   # No session.jsonl symlink — status.sh must find .pi-sessions/*.jsonl
   local running; running=$(bash "${SCRIPTS}/status.sh" "$root" --json 2>/dev/null | jq '[.workers[] | select(.status == "RUNNING")] | length')
@@ -252,7 +253,7 @@ run_P9() {
   bash "${FIXTURES_DIR}/setup-fleet.sh" completion "$root" >/dev/null
   mkdir -p "$root/workers/w1/.pi-sessions"
   cat > "$root/workers/w1/.pi-sessions/2026-05-01T19-35-36-742Z_test.jsonl" <<'JSONL'
-{"type":"message","id":"msg1","timestamp":"2026-05-01T19:35:36Z","message":{"role":"assistant","content":[{"type":"text","text":"Task complete"}],"api":"anthropic-messages","provider":"kimi-coding","model":"k2p6","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"stop","timestamp":1777664324000}}
+{"type":"message","id":"msg1","timestamp":"2026-05-01T19:35:36Z","message":{"role":"assistant","content":[{"type":"text","text":"Task complete"}],"api":"anthropic-messages","provider":"kimi-coding","model":"kimi-for-coding","usage":{"input":20000,"output":10000,"cacheRead":5000,"cacheWrite":0,"totalTokens":35000,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"stop","timestamp":1777664324000}}
 JSONL
   # No session.jsonl symlink
   local done_count; done_count=$(bash "${SCRIPTS}/status.sh" "$root" --json 2>/dev/null | jq '[.workers[] | select(.status == "DONE")] | length')

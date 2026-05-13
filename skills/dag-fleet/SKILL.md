@@ -134,11 +134,11 @@ Workers can run on `claude` (default), `codex` (OpenAI Codex CLI), or `pi` (pi.d
 {
   "config": {
     "provider": "pi",
-    "model": "k2p6",
+    "model": "kimi-for-coding",
     "reasoning_effort": "medium"
   },
   "workers": [
-    { "id": "researcher", "type": "research", "provider": "pi", "model": "kimi-k2-thinking", "reasoning_effort": "high" },
+    { "id": "researcher", "type": "research", "provider": "pi", "model": "kimi-for-coding", "reasoning_effort": "high" },
     { "id": "writer", "type": "write", "provider": "claude", "model": "sonnet" }
   ]
 }
@@ -181,8 +181,7 @@ Pi is a **provider harness**, not a model. The actual model is determined by whi
 
 | Model | Use case |
 |---|---|
-| `k2p6` | Flagship — default, strongest reasoning |
-| `kimi-for-coding` | Fast/cheap — validators, simple tasks |
+| `kimi-for-coding` | Default / stable ID — always resolves to the latest Kimi Code model |
 | `kimi-k2-thinking` | Deep reasoning — research workers |
 
 Whatever string you put in `model` is passed straight through to `pi -p --model`. No aliases, no validation.

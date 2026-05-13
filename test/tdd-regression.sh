@@ -81,14 +81,48 @@ run_gitignore() {
 # Test 3 — pi fixtures use kimi-for-coding (not heavy kimi-k2-thinking)
 # -------------------------------------------------------------------
 run_pi_model() {
-  local bad_models
+  local bad_models bad_run_all
   bad_models=$(grep -rn "kimi-k2-thinking\|k2p6" "$REPO_ROOT/test/fleet/dag-fleet/fixtures-pi/" 2>/dev/null | grep '\.json:' | wc -l)
-  if [[ "$bad_models" == "0" ]]; then
+  bad_run_all=$(grep -c "k2p6" "$REPO_ROOT/test/fleet/dag-fleet/fixtures-pi/run-all.sh" 2>/dev/null) || bad_run_all=0
+  if [[ "$bad_models" == "0" && "$bad_run_all" == "0" ]]; then
     record "pi-fixture-model" PASS
   else
-    record "pi-fixture-model" FAIL "($bad_models refs to heavy models in fixtures)"
-    grep -rn "kimi-k2-thinking\|k2p6" "$REPO_ROOT/test/fleet/dag-fleet/fixtures-pi/" 2>/dev/null | grep '\.json:'
+    record "pi-fixture-model" FAIL "(json=$bad_models run-all=$bad_run_all refs to heavy models)"
+    grep -rn "kimi-k2-thinking\|k2p6" "$REPO_ROOT/test/fleet/dag-fleet/fixtures-pi/" 2>/dev/null
   fi
+}
+
+# -------------------------------------------------------------------
+# Test 4 — pi workers pre-create session file before calling pi -p
+# (real pi --session does LOOKUP not CREATE; dag-fleet must pre-create)
+# -------------------------------------------------------------------
+run_pi_session_precreate() {
+  local root
+  root="/tmp/fleet-test-pi-session-$$"
+  rm -rf "$root"
+  mkdir -p "$root"
+
+  bash "$REPO_ROOT/test/fleet/dag-fleet/fixtures-pi/setup-fleet.sh" completion "$root" >/dev/null
+  export PATH="$REPO_ROOT/test/fleet/dag-fleet/fixtures-pi/shim:${PATH}"
+  bash "$REPO_ROOT/skills/dag-fleet/scripts/launch.sh" "$root" >"$root/launch.out" 2>&1 &
+  local lpid=$!
+  sleep 5
+
+  local has_precreate has_session
+  has_precreate=$(grep -c "printf.*session.*version.*3" "$root/workers/w1/.run.sh" 2>/dev/null | head -1 || echo 0)
+  has_session=$(grep -c -- "\-\-session " "$root/workers/w1/.run.sh" 2>/dev/null | head -1 || echo 0)
+
+  if [[ "$has_precreate" -ge 1 && "$has_session" -ge 1 ]]; then
+    record "pi-session-precreate" PASS
+  else
+    record "pi-session-precreate" FAIL "(precreate=$has_precreate session=$has_session)"
+    cat "$root/workers/w1/.run.sh" 2>/dev/null || true
+  fi
+
+  kill "$lpid" 2>/dev/null || true
+  tmux kill-session -t fleet-test-completion-pi 2>/dev/null || true
+  pkill -f "FLEET_ROOT=${root}" 2>/dev/null || true
+  rm -rf "$root"
 }
 
 # -------------------------------------------------------------------
@@ -97,6 +131,7 @@ run_pi_model() {
 run_skill_dir_var
 run_gitignore
 run_pi_model
+run_pi_session_precreate
 
 echo
 echo "============================================================"

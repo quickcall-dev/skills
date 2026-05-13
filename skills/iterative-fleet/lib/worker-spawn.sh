@@ -127,6 +127,14 @@ _build_pi_cmd() {
   # Pass through EMIT_TOOL_USE for fake-pi test shim
   cmd+=" && export EMIT_TOOL_USE='${EMIT_TOOL_USE:-0}'"
 
+  # Session management: pre-create session file so pi --session finds it.
+  # Real pi does LOOKUP not CREATE for --session; without this the worker
+  # exits immediately and the launcher supervisor dies silently.
+  cmd+=" && mkdir -p '${worker_dir}/.pi-sessions'"
+  if [[ -n "${session_name}" ]]; then
+    cmd+=" && printf '%s\n' '{\"type\":\"session\",\"version\":3,\"id\":\"${session_name}\"}' > '${worker_dir}/.pi-sessions/${session_name}.jsonl'"
+  fi
+
   cmd+=" && cat '${worker_prompt}' | pi -p"
   cmd+=" --mode json"
   cmd+=" --model '${worker_model}'"
@@ -157,12 +165,14 @@ _build_pi_cmd() {
     cmd+=" --thinking '${pi_thinking}'"
   fi
 
-  # Session management: use per-worker session dir for deterministic paths
+  if [[ -n "${session_name}" ]]; then
+    cmd+=" --session '${session_name}'"
+  fi
   cmd+=" --session-dir '${worker_dir}/.pi-sessions'"
 
   # No --max-budget-usd in Pi. Budget enforcement is external.
-  # Symlink the generated session file to our expected path.
-  cmd+=" && ln -sf '${worker_dir}/.pi-sessions/'*.jsonl '${session_jsonl}'"
+  # After pi exits, symlink the newest session file to our expected path.
+  cmd+=" && NEWEST_JSONL=\$(ls -t '${worker_dir}/.pi-sessions/'*.jsonl 2>/dev/null | head -1) && [[ -n \"\$NEWEST_JSONL\" ]] && ln -sf \"\$NEWEST_JSONL\" '${session_jsonl}'"
 }
 
 _build_pi_allowlist() {

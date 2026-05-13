@@ -355,7 +355,14 @@ PYEOF
         fi
         # Only count as "really running" if the result is non-terminal
         # OR something has touched the log in the last 30s.
-        if [[ "$last_type" != "result" && "$last_type" != "turn.completed" && "$last_type" != "turn.failed" || $_log_age -lt 30 ]]; then
+        local is_terminal=false
+        if [[ "$last_type" == "result" || "$last_type" == "turn.completed" || "$last_type" == "turn.failed" ]]; then
+          is_terminal=true
+        elif [[ "$last_type" == "message" && "$role" == "assistant" && "$stop_reason" == "stop" ]]; then
+          # Pi terminal event — assistant message with stopReason==stop
+          is_terminal=true
+        fi
+        if [[ "$is_terminal" != "true" || $_log_age -lt 30 ]]; then
           has_live_descendants=true
           if [[ "$status" == "DONE" ]]; then
             status="RUNNING"
