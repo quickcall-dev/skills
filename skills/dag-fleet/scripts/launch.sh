@@ -874,8 +874,11 @@ if [[ "${HAS_DEPS}" -gt 0 ]]; then
   # This prevents timeouts (SSH, cron, CI) from killing the orchestrator
   # while it waits for long-running dependencies.
   (
-    # Ignore HUP so parent shell exit doesn't kill us
+    # Fully detach from parent terminal to survive parent exit.
+    # SIGHUP is ignored; stdout/stderr are redirected to a log file
+    # so SIGPIPE cannot kill us when the parent's pipe/pty closes.
     trap '' HUP
+    exec >"${FLEET_ROOT}/logs/supervisor.log" 2>&1
     # Re-acquire flock in child so parent release doesn't matter
     exec 8>"${LAUNCH_LOCK}"
     try_flock 8 "${LAUNCH_PID_FILE}" x

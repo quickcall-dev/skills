@@ -23,6 +23,8 @@ echo "=== Testing supervisor fork SIGHUP protection ==="
 
 assert_contains "$LAUNCH_SH" "trap '' HUP" "child ignores HUP signal"
 assert_contains "$LAUNCH_SH" "disown -h" "disown uses -h to prevent SIGHUP"
+assert_contains "$LAUNCH_SH" "supervisor.log" "child stdout/stderr redirected to log file"
+assert_contains "$LAUNCH_SH" "SIGPIPE cannot kill us" "comment explains SIGPIPE protection"
 
 echo ""
 echo "=== Results ==="
