@@ -14,6 +14,23 @@ metadata:
 
 A skill for running parallel `claude -p`, `codex exec`, or `pi -p` workers in tmux with budgets and DAG dependencies. Supports Claude, Codex, and Pi providers — set per-fleet or per-worker. Operator owns all kill / steer / re-direction — there is no auto-restart, no auto-verify, no babysitter loop.
 
+## Prerequisites
+
+- **bash >= 4.0** — macOS ships bash 3.2 (from 2007). Install modern bash: `brew install bash`
+- **flock** — Linux built-in. macOS: `brew install flock`
+- **tmux** — `brew install tmux` or `apt install tmux`
+- **jq** — `brew install jq` or `apt install jq`
+
+### macOS quick-start
+
+```bash
+brew install bash tmux jq flock
+# Then invoke launch.sh explicitly with bash 4+:
+/opt/homebrew/bin/bash /path/to/dag-fleet/scripts/launch.sh <fleet-root>
+```
+
+If `flock` is unavailable, `launch.sh` will skip locking with a warning. Pass `--no-lock` to suppress the warning.
+
 ## When to use this skill (and when NOT to)
 
 **FIRST: prefer Claude Code's built-in Agent tool when any of these are true.** It's simpler, faster, and avoids the fleet machinery entirely.
@@ -41,7 +58,7 @@ If none of those apply, **stop reading this skill** and use the Agent tool.
 
 | Script | When to call | Args |
 |--------|-------------|------|
-| `launch.sh` | Start a new fleet from a `fleet.json` you generated | `<fleet-root>` |
+| `launch.sh` | Start a new fleet from a `fleet.json` | `<fleet-root> [--force-relaunch] [--no-lock]` |
 | `status.sh` | Show what's running, what's done, live cost, last message per worker | `<fleet-name-or-root> [-v] [--watch] [--json]` |
 | `kill.sh` | Stop one worker or the entire fleet (operator's hard stop) | `<fleet-name-or-root> <worker-id>\|all [--force]` |
 | `relaunch-worker.sh` | After editing one worker's `prompt.md`, re-run just that worker | `<fleet-name-or-root> <worker-id>` |
@@ -62,6 +79,7 @@ All scripts accept either an absolute fleet-root path **or** a fleet name (resol
 When the user asks you to launch a fleet:
 
 1. **Set `FLEET_ROOT`** to the user's specified directory. Default to cwd if unspecified. Use absolute paths only.
+1b. **macOS check:** If on macOS, verify `bash --version` >= 4.0 and `flock` is available. If not, install via brew or use `--no-lock`.
 2. **`mkdir -p $FLEET_ROOT/workers`**
 3. **Generate `$FLEET_ROOT/fleet.json`** — see `references/fleet-json-schema.md` for the full schema. Required top-level fields: `fleet_name`, `config`, `workers[]`. Each worker needs `id`, `type`, `task`, `model`, `max_turns`, `max_budget_usd`. Use `depends_on: [...]` for DAG ordering.
 4. **For each worker, create `$FLEET_ROOT/workers/{id}/prompt.md`.** The prompt MUST include this line verbatim:
@@ -185,6 +203,33 @@ Pi is a **provider harness**, not a model. The actual model is determined by whi
 | `kimi-k2-thinking` | Deep reasoning — research workers |
 
 Whatever string you put in `model` is passed straight through to `pi -p --model`. No aliases, no validation.
+
+### Model family guidance
+
+When the user says "use the [family]" without per-worker specifics, assign models by worker role:
+
+**Claude family:**
+| Worker role | Model |
+|-------------|-------|
+| Synthesis, architecture, complex reasoning | `opus` |
+| General workers, researchers, builders | `sonnet` |
+| Validators, linters, simple checks | `haiku` |
+
+**Pi / Kimi family:**
+| Worker role | Model | reasoning_effort |
+|-------------|-------|------------------|
+| Synthesis, deep reasoning, complex analysis | `kimi-k2-thinking` | `high` (or `medium`) |
+| General coding, research, builders | `kimi-for-coding` | `medium` |
+| Simple checks, validators | `kimi-for-coding` | `low` |
+
+**Codex / GPT family:**
+| Worker role | Model | reasoning_effort |
+|-------------|-------|------------------|
+| Complex reasoning, flagship tasks | `gpt-5.4` | `high` |
+| General workers, research | `gpt-5.4` | `medium` |
+| Validators, simple tasks | `gpt-5.4-mini` | `medium` or `low` |
+
+**Rule:** Match model capability to task complexity. Don't put `opus` on a linter or `haiku` on an architecture review.
 
 ### Provider limitations vs Claude
 

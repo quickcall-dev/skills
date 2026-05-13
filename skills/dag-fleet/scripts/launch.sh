@@ -23,6 +23,44 @@ source "${LIB_DIR}/tools.sh"
 source "${LIB_DIR}/worker-spawn.sh"
 
 # ---------------------------------------------------------------------------
+# macOS / bash 3.2 compatibility
+# ---------------------------------------------------------------------------
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  warn "bash ${BASH_VERSION} detected. bash 4+ recommended. Running with compatibility fallbacks."
+fi
+
+NO_FLOCK=0
+if ! command -v flock &>/dev/null; then
+  NO_FLOCK=1
+  warn "flock not found. Using pidfile-based locking fallback."
+fi
+
+# Usage: try_flock <fd> <pidfile> [mode]
+# mode: n = non-blocking (default), x = blocking
+try_flock() {
+  local _fd="$1"
+  local _pidfile="$2"
+  local _mode="${3:-n}"
+  if [[ "${NO_FLOCK}" -eq 0 ]]; then
+    if [[ "${_mode}" == "n" ]]; then
+      flock -n "${_fd}"
+    else
+      flock -x "${_fd}"
+    fi
+  else
+    if [[ -f "${_pidfile}" ]]; then
+      local _pid
+      _pid=$(cat "${_pidfile}" 2>/dev/null || echo "")
+      if [[ -n "${_pid}" ]] && kill -0 "${_pid}" 2>/dev/null; then
+        return 1
+      fi
+    fi
+    echo "$$" > "${_pidfile}"
+    return 0
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Usage
 # ---------------------------------------------------------------------------
 usage() {
@@ -129,7 +167,7 @@ fi
 LAUNCH_LOCK="${FLEET_ROOT}/.launch.lock"
 LAUNCH_PID_FILE="${FLEET_ROOT}/.launch.pid"
 exec 8>"${LAUNCH_LOCK}"
-if ! flock -n 8; then
+if ! try_flock 8 "${LAUNCH_PID_FILE}" n; then
   existing_pid="$(cat "${LAUNCH_PID_FILE}" 2>/dev/null || echo unknown)"
   echo "ERROR: another launch.sh is already active on this fleet (pid ${existing_pid})" >&2
   echo "       fleet root: ${FLEET_ROOT}" >&2
@@ -497,12 +535,29 @@ wait_for_dependencies() {
 }
 
 # ---------------------------------------------------------------------------
-# Build id->index map for O(1) lookup
+# Build id->index map (bash 3.2-compatible parallel arrays)
 # ---------------------------------------------------------------------------
-declare -A WORKER_IDX_MAP
+WORKER_IDX_IDS=()
+WORKER_IDX_INDICES=()
+
+_worker_idx() {
+  local _id="$1"
+  local _n="${#WORKER_IDX_IDS[@]}"
+  local _i
+  for ((_i = 0; _i < _n; _i++)); do
+    if [[ "${WORKER_IDX_IDS[_i]}" == "${_id}" ]]; then
+      echo "${WORKER_IDX_INDICES[_i]}"
+      return 0
+    fi
+  done
+  echo ""
+  return 1
+}
+
 for _j in $(seq 0 $((WORKER_COUNT - 1))); do
   _wid=$(jq -r ".workers[${_j}].id" "${FLEET_JSON}")
-  WORKER_IDX_MAP["${_wid}"]="${_j}"
+  WORKER_IDX_IDS+=("${_wid}")
+  WORKER_IDX_INDICES+=("${_j}")
 done
 
 # ---------------------------------------------------------------------------
@@ -517,7 +572,8 @@ _pre_generate_all_scripts() {
   info "Pre-generating .run.sh scripts for all ${WORKER_COUNT} workers ..."
   while IFS= read -r TOPO_WID; do
     [[ -z "${TOPO_WID}" ]] && continue
-    local i="${WORKER_IDX_MAP[${TOPO_WID}]}"
+    local i
+    i="$(_worker_idx "${TOPO_WID}")"
     local _wid _type _model _provider _effort _turns _budget _task
     _wid=$(jq -r ".workers[${i}].id" "${FLEET_JSON}")
     _type=$(jq -r ".workers[${i}].type // \"read-only\"" "${FLEET_JSON}")
@@ -612,7 +668,8 @@ _launch_workers() {
   local _seq=0
   while IFS= read -r TOPO_WID; do
     [[ -z "${TOPO_WID}" ]] && continue
-    local i="${WORKER_IDX_MAP[${TOPO_WID}]}"
+    local i
+    i="$(_worker_idx "${TOPO_WID}")"
     _seq=$((_seq + 1))
 
     local WORKER_ID WORKER_TYPE WORKER_MODEL WORKER_PROVIDER
@@ -674,7 +731,8 @@ _launch_workers() {
     local WORKER_SPAWN_LOCK="${WORKER_DIR}/.launch.lock"
     (
       exec 9>"${WORKER_SPAWN_LOCK}"
-      if ! flock -n 9; then
+      local WORKER_SPAWN_PID="${WORKER_DIR}/.spawn.pid"
+      if ! try_flock 9 "${WORKER_SPAWN_PID}" n; then
         echo "SKIP_LOCK"
         exit 0
       fi
@@ -816,15 +874,18 @@ if [[ "${HAS_DEPS}" -gt 0 ]]; then
   # This prevents timeouts (SSH, cron, CI) from killing the orchestrator
   # while it waits for long-running dependencies.
   (
+    # Ignore HUP so parent shell exit doesn't kill us
+    trap '' HUP
     # Re-acquire flock in child so parent release doesn't matter
     exec 8>"${LAUNCH_LOCK}"
-    flock -x 8
+    try_flock 8 "${LAUNCH_PID_FILE}" x
     echo "${BASHPID}" > "${LAUNCH_PID_FILE}"
     trap 'rm -f "${LAUNCH_PID_FILE}"' EXIT
     _launch_workers
   ) &
   SUPERVISOR_PID=$!
-  disown ${SUPERVISOR_PID} 2>/dev/null || true
+  # -h = mark job to NOT receive SIGHUP when this shell exits
+  disown -h ${SUPERVISOR_PID} 2>/dev/null || true
 
   success "Fleet supervisor forked to background (pid ${SUPERVISOR_PID})"
   info "First-wave workers launching now. Dependent workers auto-launch when deps complete."

@@ -24,6 +24,17 @@ Before planning, **read the fleet index** to know what's available:
 
 This is a two-step lookup: cheap index first (one small file), full schema second (one SKILL.md). Never read all fleet SKILL.md files — that wastes context.
 
+## Step 0.5: Verify prerequisites
+
+Before generating the fleet, warn the user if any prerequisite is missing:
+
+- **bash >= 4.0** — required for associative arrays in launch.sh. On macOS: `brew install bash` and invoke with `/opt/homebrew/bin/bash`
+- **flock** — Linux has it built-in. On macOS: `brew install flock` or use `launch.sh --no-lock`
+- **tmux** — `brew install tmux` or `apt install tmux`
+- **jq** — `brew install jq` or `apt install jq`
+
+If the user is on macOS, mention these upfront so they don't hit launch failures.
+
 ## Step 1: Ask where to place the fleet
 
 Before analyzing anything, ask the user:
@@ -58,6 +69,14 @@ After picking, read the chosen fleet's SKILL.md to get the exact fleet.json sche
 
 ## Step 3: Generate fleet.json
 
+### Guardrail: unsupported provider or model
+
+If the user requests a provider or model not in the valid lists below, you MUST either:
+1. **Map to closest valid equivalent** and explicitly disclose: *"Fleet mode only supports [valid providers]. Mapped your request to [X] with [Y]."*
+2. **Error and refuse to generate** if no reasonable mapping exists.
+
+**Never silently emit invalid config.** The agent's own thinking recognizing a value is unsupported is not sufficient — the output must be valid.
+
 ### Valid models — ONLY use these
 
 **Claude models (provider: "claude", default):**
@@ -76,17 +95,36 @@ After picking, read the chosen fleet's SKILL.md to get the exact fleet.json sche
 | `gpt-5.4-mini` | Fast/cheap — validators, simple tasks |
 | `gpt-5.3-codex` | Coding-focused (migrating to gpt-5.4) |
 
-**Pi models (provider: "pi"):**
-
-| Model | When to use |
-|-------|-------------|
-| `kimi-for-coding` | Default / stable ID — always resolves to latest Kimi Code model |
-| `kimi-k2-thinking` | Deep reasoning — research workers, complex synthesis |
-
 **Default:** `sonnet` for Claude workers, `haiku` for fallback_model.
 **Only use `opus`** when the task clearly needs it. Cost difference is significant.
 **Use codex** when the user requests it or the task benefits from OpenAI models (e.g. research with web search via codex).
-**Use pi** when the user requests it or wants Kimi Code models. Pass any model string through — pi resolves it via its configured provider.
+
+### Model family guidance
+
+When the user says "use the [family]" without per-worker specifics, assign models by worker role:
+
+**Claude family (provider: "claude"):**
+| Worker role | Model | Why |
+|-------------|-------|-----|
+| Synthesis, architecture, complex reasoning | `opus` | Highest intelligence, largest context |
+| General workers, researchers, builders | `sonnet` | Default — best cost/performance |
+| Validators, linters, simple checks | `haiku` | Cheap/fast |
+
+**Pi / Kimi family (provider: "pi"):**
+| Worker role | Model | reasoning_effort |
+|-------------|-------|------------------|
+| Synthesis, deep reasoning, complex analysis | `kimi-k2-thinking` | `high` (or `medium` if not deeply analytical) |
+| General coding, research, builders | `kimi-for-coding` | `medium` |
+| Simple checks, validators | `kimi-for-coding` | `low` |
+
+**Codex / GPT family (provider: "codex"):**
+| Worker role | Model | reasoning_effort |
+|-------------|-------|------------------|
+| Complex reasoning, flagship tasks | `gpt-5.4` | `high` |
+| General workers, research | `gpt-5.4` | `medium` |
+| Validators, simple tasks | `gpt-5.4-mini` | `medium` or `low` |
+
+**Rule:** Match model capability to task complexity. Don't put `opus` on a linter or `haiku` on an architecture review.
 
 ### Budget guidelines
 
@@ -98,6 +136,15 @@ After picking, read the chosen fleet's SKILL.md to get the exact fleet.json sche
 | Large task (architectural change, full module) | 5.00 - 10.00 |
 
 **Do NOT set max_turns.** It defaults to unlimited. Budget is the only limiter.
+
+### Validation checklist (MUST complete before output)
+
+Before writing fleet.json to disk, verify EVERY item:
+- [ ] `type` field present at top level (`"worktree"`, `"dag"`, or `"iterative"`)
+- [ ] `max_turns` is NOT set on any worker (omit entirely for unlimited)
+- [ ] `reasoning_effort` only paired with `codex` or `pi` provider
+- [ ] All provider/model values are from the valid lists above
+- [ ] Status command template uses `<fleet-root>` path, not fleet name
 
 ### Worker type selection — CRITICAL
 
@@ -130,12 +177,13 @@ Pick the worker type based on what the worker **needs to output**, not what it r
 }
 ```
 
+`"type"` is a required top-level field.
+
 **Provider fields (optional):**
-- `config.provider` — `"claude"` (default), `"codex"`, or `"pi"`. Per-worker override: `worker.provider`.
-- `config.reasoning_effort` — `"low"`, `"medium"`, or `"high"` (codex and pi). Per-worker override: `worker.reasoning_effort`.
+- `config.provider` — `"claude"` (default) or `"codex"`. Per-worker override: `worker.provider`.
+- `config.reasoning_effort` — `"low"`, `"medium"`, or `"high"` (codex only). Per-worker override: `worker.reasoning_effort`.
 - When `provider: "codex"`, the `fallback_model` field is ignored (codex has no fallback).
 - When `provider: "codex"`, `max_budget_usd` is NOT enforced per-worker (codex has no budget flag). Fleet-level cost tracking still works via token estimation.
-- When `provider: "pi"`, `max_budget_usd` is NOT enforced per-worker (pi has no budget flag). Fleet-level cost tracking works via token estimation.
 
 **worktree-fleet additions:**
 - Every worker MUST have `target_files` (array of file globs) and `branch` (unique branch name)
@@ -150,6 +198,16 @@ Pick the worker type based on what the worker **needs to output**, not what it r
 **dag-fleet additions:**
 - Use `depends_on: ["worker-id"]` for dependency ordering
 - Workers without dependencies run in parallel
+
+### Config → prompt sync rule
+
+After ANY change to `fleet.json` (models, budgets, methodology, provider), you MUST regenerate ALL `prompt.md` files to match. Prompts are not automatically synced — stale prompts cause partial update propagation bugs.
+
+Specifically verify in each prompt.md:
+- Model name matches fleet.json
+- Budget value matches fleet.json
+- Methodology (MECE, citations, web search) matches user requirements
+- Output path rules match fleet type
 
 ## Step 4: Generate prompt.md for each worker
 
@@ -214,6 +272,7 @@ After generating everything, tell the user:
    ```
    bash <path-to-fleet-skill>/scripts/status.sh <fleet-root>
    ```
+   `<fleet-root>` is the absolute path to the fleet directory. While status.sh can resolve fleet names, always give the user the absolute path to avoid confusion.
 
 **ALWAYS give the user the status command.** This is mandatory.
 

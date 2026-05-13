@@ -7,8 +7,10 @@
 # Levels:
 #   --soft (default): archive workers/ + logs/ under archive/<ts>/, clear
 #     launch flags, reset fleet.json status fields, kill tmux session.
-#   --hard: wipe workers/, logs/, archive/, directives/, shared/, .cost-ledger.jsonl,
-#     results.tsv; reset fleet.json; unregister from fleet registry.
+#   --hard: DESTRUCTIVE — wipes workers/, logs/, archive/, directives/, shared/,
+#     .cost-ledger.jsonl, results.tsv; reset fleet.json; unregister from fleet registry.
+#     ALL logs and prior outputs are permanently deleted. Archive first if you need them:
+#       cp -r <FLEET_ROOT>/logs/ <FLEET_ROOT>/archive-logs-backup/
 #
 # Flags:
 #   --dry-run : print actions, touch nothing
@@ -74,6 +76,10 @@ case "${LEVEL}" in
     reset_fleet_json      "${FLEET_ROOT}" ${DRY:+--dry-run}
     ;;
   hard)
+    if [[ "${DRY}" != "--dry-run" ]]; then
+      echo "[reset] WARNING: --hard will PERMANENTLY DELETE all logs, outputs, and archives."
+      echo "[reset]          If you need logs, archive them first: cp -r ${FLEET_ROOT}/logs/ ./backup-logs/"
+    fi
     reset_clear_flags "${FLEET_ROOT}" ${DRY:+--dry-run}
     reset_hard_wipe   "${FLEET_ROOT}" ${DRY:+--dry-run}
     reset_fleet_json  "${FLEET_ROOT}" ${DRY:+--dry-run}

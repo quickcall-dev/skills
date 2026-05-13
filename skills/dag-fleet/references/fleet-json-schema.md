@@ -6,11 +6,16 @@
 {
   "fleet_name": "my-fleet",
   "fleet_id": "my-fleet-2026-03-31",
+  "type": "dag",
   "status": "pending",
   "config": { ... },
   "workers": [ ... ]
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | Yes | Fleet type: `"worktree"`, `"dag"`, or `"iterative"`. Required top-level field. |
 
 ## Config fields
 
@@ -30,7 +35,7 @@
 | `type` | string | Yes | Worker type: `read-only`, `write`, `code-run`, `research`, `reviewer` |
 | `model` | string | No | Override model (falls back to config.model) |
 | `task` | string | Yes | Task description |
-| `max_turns` | int | No | Max agentic turns (default: 30) |
+| `max_turns` | int | No | **DO NOT SET.** Omit for unlimited turns. Budget (`max_budget_usd`) is the only limiter. |
 | `max_budget_usd` | float | No | Per-worker budget cap (default: 0.25) |
 | `depends_on` | string[] | No | Worker IDs that must complete before this worker launches |
 
@@ -54,7 +59,6 @@
       "type": "research",
       "model": "haiku",
       "task": "Research topic A",
-      "max_turns": 20,
       "max_budget_usd": 0.15
     },
     {
@@ -62,7 +66,6 @@
       "type": "write",
       "model": "sonnet",
       "task": "Synthesize all research into a report",
-      "max_turns": 30,
       "max_budget_usd": 0.25,
       "depends_on": ["researcher-01"]
     }
