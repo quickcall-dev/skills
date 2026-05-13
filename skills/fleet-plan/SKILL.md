@@ -76,9 +76,17 @@ After picking, read the chosen fleet's SKILL.md to get the exact fleet.json sche
 | `gpt-5.4-mini` | Fast/cheap — validators, simple tasks |
 | `gpt-5.3-codex` | Coding-focused (migrating to gpt-5.4) |
 
+**Pi models (provider: "pi"):**
+
+| Model | When to use |
+|-------|-------------|
+| `kimi-for-coding` | Default / stable ID — always resolves to latest Kimi Code model |
+| `kimi-k2-thinking` | Deep reasoning — research workers, complex synthesis |
+
 **Default:** `sonnet` for Claude workers, `haiku` for fallback_model.
 **Only use `opus`** when the task clearly needs it. Cost difference is significant.
 **Use codex** when the user requests it or the task benefits from OpenAI models (e.g. research with web search via codex).
+**Use pi** when the user requests it or wants Kimi Code models. Pass any model string through — pi resolves it via its configured provider.
 
 ### Budget guidelines
 
@@ -123,10 +131,11 @@ Pick the worker type based on what the worker **needs to output**, not what it r
 ```
 
 **Provider fields (optional):**
-- `config.provider` — `"claude"` (default) or `"codex"`. Per-worker override: `worker.provider`.
-- `config.reasoning_effort` — `"low"`, `"medium"`, or `"high"` (codex only). Per-worker override: `worker.reasoning_effort`.
+- `config.provider` — `"claude"` (default), `"codex"`, or `"pi"`. Per-worker override: `worker.provider`.
+- `config.reasoning_effort` — `"low"`, `"medium"`, or `"high"` (codex and pi). Per-worker override: `worker.reasoning_effort`.
 - When `provider: "codex"`, the `fallback_model` field is ignored (codex has no fallback).
 - When `provider: "codex"`, `max_budget_usd` is NOT enforced per-worker (codex has no budget flag). Fleet-level cost tracking still works via token estimation.
+- When `provider: "pi"`, `max_budget_usd` is NOT enforced per-worker (pi has no budget flag). Fleet-level cost tracking works via token estimation.
 
 **worktree-fleet additions:**
 - Every worker MUST have `target_files` (array of file globs) and `branch` (unique branch name)
