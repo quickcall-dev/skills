@@ -258,6 +258,29 @@ PYEOF
           cost=$(_pi_accumulate_cost "$log")
           [[ -z "$cost" ]] && cost="0"
         fi
+      elif [[ -z "$last_type" ]]; then
+        # session.jsonl last line is unparseable (corrupted/invalid JSON).
+        # Graceful degradation: trust status.json or .done file before
+        # declaring STUCK. This handles pi compaction events that break
+        # the JSON stream (finding 002-01).
+        local _fallback_status=""
+        if [[ -f "$status_file" ]]; then
+          _fallback_status=$(jq -r '.status // ""' "$status_file" 2>/dev/null || echo "")
+        fi
+        if [[ "$_fallback_status" == "DONE" ]] || [[ -e "${FLEET_ROOT}/workers/${wid}/.done" ]]; then
+          status="DONE"
+          done_count=$((done_count + 1))
+          cost="0"
+        elif [[ "$_fallback_status" == "FAILED" || "$_fallback_status" == "KILLED" ]]; then
+          status="$_fallback_status"
+          if [[ "$status" == "FAILED" ]]; then
+            failed=$((failed + 1))
+          fi
+          cost="0"
+        else
+          status="RUNNING"
+          running=$((running + 1))
+        fi
       else
         status="RUNNING"
         running=$((running + 1))
