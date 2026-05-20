@@ -127,13 +127,9 @@ _build_pi_cmd() {
   # Pass through EMIT_TOOL_USE for fake-pi test shim
   cmd+=" && export EMIT_TOOL_USE='${EMIT_TOOL_USE:-0}'"
 
-  # Session management: pre-create session file so pi --session finds it.
-  # Real pi does LOOKUP not CREATE for --session; without this the worker
-  # exits immediately and the launcher supervisor dies silently.
+  # Session dir: pi auto-creates sessions here. We never pass --session
+  # because real pi rejects pre-created session files (experiment 001).
   cmd+=" && mkdir -p '${worker_dir}/.pi-sessions'"
-  if [[ -n "${session_name}" ]]; then
-    cmd+=" && printf '%s\n' '{\"type\":\"session\",\"version\":3,\"id\":\"${session_name}\"}' > '${worker_dir}/.pi-sessions/${session_name}.jsonl'"
-  fi
 
   cmd+=" && cat '${worker_prompt}' | pi -p"
   cmd+=" --mode json"
@@ -165,9 +161,6 @@ _build_pi_cmd() {
     cmd+=" --thinking '${pi_thinking}'"
   fi
 
-  if [[ -n "${session_name}" ]]; then
-    cmd+=" --session '${session_name}'"
-  fi
   cmd+=" --session-dir '${worker_dir}/.pi-sessions'"
 
   # No --max-budget-usd in Pi. Budget enforcement is external.

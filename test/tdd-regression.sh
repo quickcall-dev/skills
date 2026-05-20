@@ -93,8 +93,8 @@ run_pi_model() {
 }
 
 # -------------------------------------------------------------------
-# Test 4 — pi workers pre-create session file before calling pi -p
-# (real pi --session does LOOKUP not CREATE; dag-fleet must pre-create)
+# Test 4 — pi workers do NOT pre-create session file or pass --session
+# (real pi rejects pre-created sessions; let pi auto-create)
 # -------------------------------------------------------------------
 run_pi_session_precreate() {
   local root
@@ -109,13 +109,15 @@ run_pi_session_precreate() {
   sleep 5
 
   local has_precreate has_session
-  has_precreate=$(grep -c "printf.*session.*version.*3" "$root/workers/w1/.run.sh" 2>/dev/null | head -1 || echo 0)
-  has_session=$(grep -c -- "\-\-session " "$root/workers/w1/.run.sh" 2>/dev/null | head -1 || echo 0)
+  has_precreate=$(grep -c "printf.*session.*version.*3" "$root/workers/w1/.run.sh" 2>/dev/null)
+  has_precreate=${has_precreate:-0}
+  has_session=$(grep -c -- "\-\-session " "$root/workers/w1/.run.sh" 2>/dev/null)
+  has_session=${has_session:-0}
 
-  if [[ "$has_precreate" -ge 1 && "$has_session" -ge 1 ]]; then
-    record "pi-session-precreate" PASS
+  if [[ "$has_precreate" -eq 0 && "$has_session" -eq 0 ]]; then
+    record "pi-session-no-precreate" PASS
   else
-    record "pi-session-precreate" FAIL "(precreate=$has_precreate session=$has_session)"
+    record "pi-session-no-precreate" FAIL "(precreate=$has_precreate session=$has_session)"
     cat "$root/workers/w1/.run.sh" 2>/dev/null || true
   fi
 

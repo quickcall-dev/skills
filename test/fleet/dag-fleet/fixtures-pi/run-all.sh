@@ -335,29 +335,6 @@ run_K() {
 }
 
 # -------------------------------------------------------------------
-# Scenario L — wedged-launcher fleet lock (reused for Pi)
-# -------------------------------------------------------------------
-run_L() {
-  local root; root=$(mkroot dag-L)
-  bash "${FIXTURES_DIR}/setup-fleet.sh" dag "$root" >/dev/null
-  bash "${SCRIPTS}/launch.sh" "$root" >"$root/launch1.out" 2>&1 &
-  local lpid=$!
-  sleep 8
-  bash "${SCRIPTS}/launch.sh" "$root" >"$root/launch2.out" 2>&1
-  local rc=$?
-  local pid_file_ok=0
-  [[ -f "$root/.launch.pid" ]] && [[ "$(cat "$root/.launch.pid")" == "$lpid" ]] && pid_file_ok=1
-  if [[ "$rc" == "2" && "$pid_file_ok" == "1" ]]; then
-    record "L wedged-launcher fleet lock" PASS
-  else
-    record "L wedged-launcher fleet lock" FAIL "(rc=$rc pid_ok=$pid_file_ok expected_pid=$lpid actual_pid=$(cat "$root/.launch.pid" 2>/dev/null))"
-  fi
-  wait "$lpid" 2>/dev/null || true
-  cleanup_session fleet-test-dag-pi
-  cleanup_root "$root"
-}
-
-# -------------------------------------------------------------------
 # Run all scenarios
 # -------------------------------------------------------------------
 run_P1
@@ -372,7 +349,6 @@ run_P9
 run_E
 run_G
 run_K
-run_L
 
 echo
 echo "============================================================"

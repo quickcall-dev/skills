@@ -45,7 +45,7 @@ run_dag() {
   local lpid=$!
   sleep 5
   local has_tools; has_tools=$(grep -c -- '--tools' "$root/workers/a/.run.sh" 2>/dev/null)
-  local has_model; has_model=$(grep -c "kimi-coding" "$root/workers/a/.run.sh" 2>/dev/null)
+  local has_model; has_model=$(grep -c "kimi-for-coding" "$root/workers/a/.run.sh" 2>/dev/null)
   if [[ "$has_tools" -ge 1 && "$has_model" -ge 1 ]]; then
     record "dag-fleet pi launch" PASS
   else

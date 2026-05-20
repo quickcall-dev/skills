@@ -38,10 +38,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Mimic real pi: --session requires a pre-existing session file
+# Mimic real pi: --session requires a pre-existing session file.
+# Real pi rejects manually pre-created files (missing timestamp/cwd fields
+# that pi itself writes). This regression-guard prevents reverting the fix
+# in worker-spawn.sh that removes --session for pi provider.
 if [[ -n "$SESSION_NAME" && -n "$SESSION_DIR" ]]; then
   SESSION_FILE="${SESSION_DIR}/${SESSION_NAME}.jsonl"
   if [[ ! -f "$SESSION_FILE" ]]; then
+    echo "No session found matching '${SESSION_NAME}'" >&2
+    exit 1
+  fi
+  # Reject manually pre-created session files (missing pi-created fields)
+  if ! grep -q '"timestamp"' "$SESSION_FILE" 2>/dev/null; then
     echo "No session found matching '${SESSION_NAME}'" >&2
     exit 1
   fi
