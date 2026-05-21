@@ -423,11 +423,16 @@ dag_spawn_worker() {
   local worker_cmd
   worker_cmd=\$(cat "\${cmd_file}")
   if [[ "\${iter_prompt}" != "\${original_prompt}" ]]; then
-    worker_cmd=\$(echo "\${worker_cmd}" | sed "s|cat '\${original_prompt}'|cat '\${iter_prompt}'|g")
+    worker_cmd=\$(printf '%s\n' "\${worker_cmd}" | sed "s|cat '\${original_prompt}'|cat '\${iter_prompt}'|g")
     log "Injected review feedback from iterations 1-\$((iter - 1)) into prompt for '\${wid}'"
   fi
+  # Write modified command to temp script and execute directly.
+  # Avoids bash -c quoting issues where outer shell expands dollar-variables.
+  local _run_script="\${FLEET_ROOT}/.worker-run-\${wid}-iter-\${iter}.sh"
+  printf '%s\n' "\${worker_cmd}" > "\${_run_script}"
+  chmod +x "\${_run_script}"
   tmux new-window -t "\${TMUX_SESSION}" -n "\${wid}" \\
-    "bash -c \\"\${worker_cmd}\\""
+    "bash '\${_run_script}'"
 
   log "Spawned worker '\${wid}' (iteration \${iter})"
 }
@@ -764,7 +769,7 @@ while IFS= read -r WORKER_ID; do
   INNER_CMD+="; sleep 30"
 
   # Save command for ALL workers (orchestrator reads these to spawn per iteration)
-  echo "${INNER_CMD}" > "${FLEET_ROOT}/.worker-cmd-${WORKER_ID}.sh"
+  printf '%s\n' "${INNER_CMD}" > "${FLEET_ROOT}/.worker-cmd-${WORKER_ID}.sh"
 
   # Determine this worker's DAG layer
   WORKER_LAYER=$(dag_get_layer "${WORKER_ID}" "${FLEET_JSON}")

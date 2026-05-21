@@ -128,12 +128,66 @@ run_pi_session_precreate() {
 }
 
 # -------------------------------------------------------------------
+# Test 5 — iterative-fleet orchestrator executes pi worker without
+# bash -c quoting issues. The orchestrator must write the command to
+# a temp script and execute it directly, NOT use bash -c "${worker_cmd}"
+# which causes dash/tmux to expand $variables.
+# -------------------------------------------------------------------
+run_pi_orchestrator_exec() {
+  local root
+  root="/tmp/fleet-test-pi-orch-$$"
+  rm -rf "$root"
+  mkdir -p "$root"
+
+  cat > "$root/fleet.json" <<'EOF'
+{
+  "fleet_name": "test-pi-orch",
+  "type": "iterative",
+  "config": {
+    "provider": "pi",
+    "model": "kimi-for-coding"
+  },
+  "stop_when": { "max_iterations": 2 },
+  "workers": [
+    { "id": "reviewer", "type": "reviewer", "task": "Review" }
+  ]
+}
+EOF
+  mkdir -p "$root/workers/reviewer"
+  echo "review" > "$root/workers/reviewer/prompt.md"
+
+  # Dry-run generates orchestrator.sh — check the template
+  bash "$REPO_ROOT/skills/iterative-fleet/scripts/launch.sh" "$root" --dry-run >"$root/launch.out" 2>&1 || true
+
+  # Orchestrator template must use printf + direct bash execution,
+  # NOT bash -c "${worker_cmd}"
+  local has_printf has_bash_direct has_old_bash_c
+  has_printf=$(grep -c "printf '%s\\\\n'" "$root/orchestrator.sh" 2>/dev/null) || has_printf=0
+  has_printf=${has_printf:-0}
+  has_bash_direct=$(grep -c "bash '\${_run_script}'" "$root/orchestrator.sh" 2>/dev/null) || has_bash_direct=0
+  has_bash_direct=${has_bash_direct:-0}
+  # The old dangerous pattern: bash -c "${worker_cmd}"
+  has_old_bash_c=$(grep -c 'bash -c "\\\${worker_cmd}"' "$root/orchestrator.sh" 2>/dev/null) || has_old_bash_c=0
+  has_old_bash_c=${has_old_bash_c:-0}
+
+  if [[ "$has_printf" -ge 1 && "$has_bash_direct" -ge 1 && "$has_old_bash_c" -eq 0 ]]; then
+    record "pi-orchestrator-direct-exec" PASS
+  else
+    record "pi-orchestrator-direct-exec" FAIL "(printf=$has_printf bash_direct=$has_bash_direct old_bash_c=$has_old_bash_c)"
+    grep -n 'bash' "$root/orchestrator.sh" 2>/dev/null | head -10 || true
+  fi
+
+  rm -rf "$root"
+}
+
+# -------------------------------------------------------------------
 # Run
 # -------------------------------------------------------------------
 run_skill_dir_var
 run_gitignore
 run_pi_model
 run_pi_session_precreate
+run_pi_orchestrator_exec
 
 echo
 echo "============================================================"

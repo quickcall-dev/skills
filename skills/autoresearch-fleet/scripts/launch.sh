@@ -446,7 +446,7 @@ while true; do
   # For search mode with claude provider, inject --tools default (enables WebSearch)
   # For Pi provider, build_inner_cmd already handles --tools via PI_TOOLS
   if [[ "${is_search}" == "true" && "${PROVIDER}" == "claude" ]]; then
-    AGENT_CMD=$(echo "${AGENT_CMD}" | sed 's/claude -p/claude -p --tools default/')
+    AGENT_CMD=$(printf '%s\n' "${AGENT_CMD}" | sed 's/claude -p/claude -p --tools default/')
   fi
 
   agent_rc=0

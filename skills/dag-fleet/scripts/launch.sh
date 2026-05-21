@@ -655,7 +655,7 @@ EOF
 
     local _runner="${_wdir}/.run.sh"
     echo "#!/bin/bash" > "${_runner}"
-    echo "${_inner}" >> "${_runner}"
+    printf '%s\n' "${_inner}" >> "${_runner}"
     chmod +x "${_runner}"
   done <<< "${TOPO_ORDER}"
   success "All worker scripts pre-generated."
