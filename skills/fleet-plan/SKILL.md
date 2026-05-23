@@ -17,7 +17,7 @@ Analyze work, pick the right fleet type, generate fleet.json + worker prompts. Y
 
 Before planning, **read the fleet index** to know what's available:
 
-1. Find the index: `Glob` for `**/fleet/FLEET-INDEX.md` (or look in the same parent dir as this skill)
+1. Find the index: `Glob` for `**/FLEET-INDEX.md` (or look in the same parent dir as this skill)
 2. Read `FLEET-INDEX.md` — it has a table of all fleet types with one-liner hints on when to use each
 3. Based on the hints, **pick the best fleet type** for the user's task
 4. **Then** read ONLY the chosen fleet's `SKILL.md` for the full schema: `Glob` for `**/<chosen-fleet>/SKILL.md`
@@ -91,7 +91,8 @@ If the user requests a provider or model not in the valid lists below, you MUST 
 
 | Model | When to use |
 |-------|-------------|
-| `gpt-5.4` | Flagship — strongest reasoning, recommended default |
+| `gpt-5.5` | Latest flagship — strongest reasoning, use when available |
+| `gpt-5.4` | Flagship — strong reasoning, reliable default |
 | `gpt-5.4-mini` | Fast/cheap — validators, simple tasks |
 | `gpt-5.3-codex` | Coding-focused (migrating to gpt-5.4) |
 
@@ -120,7 +121,7 @@ When the user says "use the [family]" without per-worker specifics, assign model
 **Codex / GPT family (provider: "codex"):**
 | Worker role | Model | reasoning_effort |
 |-------------|-------|------------------|
-| Complex reasoning, flagship tasks | `gpt-5.4` | `high` |
+| Complex reasoning, flagship tasks | `gpt-5.5` | `high` |
 | General workers, research | `gpt-5.4` | `medium` |
 | Validators, simple tasks | `gpt-5.4-mini` | `medium` or `low` |
 

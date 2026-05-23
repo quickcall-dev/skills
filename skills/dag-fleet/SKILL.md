@@ -187,7 +187,8 @@ Workers can run on `claude` (default), `codex` (OpenAI Codex CLI), or `pi` (pi.d
 
 | Model | Use case |
 |---|---|
-| `gpt-5.4` | Flagship — strongest reasoning, recommended default |
+| `gpt-5.5` | Latest flagship — strongest reasoning, use when available |
+| `gpt-5.4` | Flagship — strong reasoning, reliable default |
 | `gpt-5.4-mini` | Fast/cheap — validators, simple tasks |
 | `gpt-5.3-codex` | Coding-focused (migrating to gpt-5.4) |
 
@@ -225,7 +226,7 @@ When the user says "use the [family]" without per-worker specifics, assign model
 **Codex / GPT family:**
 | Worker role | Model | reasoning_effort |
 |-------------|-------|------------------|
-| Complex reasoning, flagship tasks | `gpt-5.4` | `high` |
+| Complex reasoning, flagship tasks | `gpt-5.5` | `high` |
 | General workers, research | `gpt-5.4` | `medium` |
 | Validators, simple tasks | `gpt-5.4-mini` | `medium` or `low` |
 
