@@ -17,7 +17,10 @@ Analyze work, pick the right fleet type, generate fleet.json + worker prompts. Y
 
 Before planning, **read the fleet index** to know what's available:
 
-1. Find the index: `Glob` for `**/FLEET-INDEX.md` (or look in the same parent dir as this skill)
+1. Find the index: `Glob` for `**/FLEET-INDEX.md` starting from `~` or cwd. If Glob fails, check these locations in order:
+   - Same parent dir as this skill (following symlinks)
+   - `~/.pi/agent/skills/FLEET-INDEX.md`
+   - `~/.agents/skills/FLEET-INDEX.md`
 2. Read `FLEET-INDEX.md` — it has a table of all fleet types with one-liner hints on when to use each
 3. Based on the hints, **pick the best fleet type** for the user's task
 4. **Then** read ONLY the chosen fleet's `SKILL.md` for the full schema: `Glob` for `**/<chosen-fleet>/SKILL.md`
