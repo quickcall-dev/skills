@@ -13,19 +13,43 @@ metadata:
 
 Analyze work, pick the right fleet type, generate fleet.json + worker prompts. You plan — the fleet skills execute.
 
-## Step 0: Discover available fleet types
+## Step 0: Pick a fleet type
 
-Before planning, **read the fleet index** to know what's available:
+Use the built-in decision tree below. No external lookup needed.
 
-1. Find the index: `Glob` for `**/FLEET-INDEX.md` starting from `~` or cwd. If Glob fails, check these locations in order:
-   - Same parent dir as this skill (following symlinks)
-   - `~/.pi/agent/skills/FLEET-INDEX.md`
-   - `~/.agents/skills/FLEET-INDEX.md`
-2. Read `FLEET-INDEX.md` — it has a table of all fleet types with one-liner hints on when to use each
-3. Based on the hints, **pick the best fleet type** for the user's task
-4. **Then** read ONLY the chosen fleet's `SKILL.md` for the full schema: `Glob` for `**/<chosen-fleet>/SKILL.md`
+### Available fleet types
 
-This is a two-step lookup: cheap index first (one small file), full schema second (one SKILL.md). Never read all fleet SKILL.md files — that wastes context.
+| Fleet type | When to use | When NOT to use |
+|---|---|---|
+| **dag-fleet** | One-shot DAG workers with dependencies, budgets, mixed models/providers. Persistent across sessions. | Workers need git isolation or edit overlapping files. |
+| **worktree-fleet** | Independent tasks touching non-overlapping files. Each worker in its own git worktree/branch. Merge-safe isolation. | Tasks share files or need coordination/read each other's output. |
+| **iterative-fleet** | Work needs reviewer-in-the-loop (builder → reviewer → verdict → repeat). Quality-gated iteration. | One-shot work without review cycles. |
+| **autoresearch-fleet** | Optimizing a single metric with fast eval harness. Autonomous overnight runs. Plateau-triggered web search. | No eval harness exists, or task isn't optimization. |
+
+### Decision tree
+
+```
+Q1: Can one agent handle this in a single session?
+    YES → "No fleet needed — this fits in one session." STOP.
+
+Q2: Are the tasks independent (no shared files, no shared state)?
+    YES → worktree-fleet
+    NO  → continue
+
+Q3: Does the work need iteration with a reviewer making accept/iterate decisions?
+    YES → iterative-fleet
+    NO  → continue
+
+Q4: Is the work a one-shot DAG (each agent runs to completion, dependencies via depends_on)?
+    YES → dag-fleet
+    NO  → continue
+
+Q5: Is it an optimization loop with a fast eval harness?
+    YES → autoresearch-fleet
+    NO  → "Open multiple sessions — you're the orchestrator." STOP.
+```
+
+After picking, **read ONLY the chosen fleet's SKILL.md** for the full schema. Never read all fleet SKILL.md files — that wastes context.
 
 ## Step 0.5: Verify prerequisites
 
@@ -51,13 +75,13 @@ Before analyzing anything, ask the user:
 
 ## Step 2: Pick a fleet type
 
-Use the hints from FLEET-INDEX.md to match the user's task. Quick heuristic:
+Use the table and decision tree above to match the user's task. Quick heuristic:
 
 ```
 Q1: Can one agent handle this in a single session?
     YES → "No fleet needed — this fits in one session." STOP.
 
-Q2: Does FLEET-INDEX.md have a matching fleet type?
+Q2: Does the decision tree match a fleet type?
     YES → Pick it. Read its SKILL.md for the full schema.
 
 Q3: No match?
