@@ -42,6 +42,7 @@ Do not use for plain text Markdown without diagrams.
 3. **Build HTML with print CSS**
    - Set `@page { margin: 0.55in; }`.
    - Add a designed Table of Contents near the top for long documents. Generate it from headings in the temporary build, not by editing source Markdown. Links are preferred when supported.
+   - Add PDF outline/bookmarks for Preview/sidebar navigation. This is separate from visible TOC content. Use document headings, usually title + major sections.
    - Do not leave the TOC as raw Markdown bullets with awkward hyperlink styling. Render it as a polished `nav.toc`, ordered hierarchy, or table-style list with clean spacing, muted section numbers, and normal link text.
    - Use readable body width and table styles.
    - Start major sections on new pages. For docs where `##` are major sections, use `h2 { break-before: page; }` and exempt the first major section if needed. For true H1 sectioned docs, use `h1 { break-before: page; }` except the document title.
@@ -74,10 +75,20 @@ Do not use for plain text Markdown without diagrams.
 | Tables overflow | CSS `table-layout:auto`, smaller font, horizontal-safe widths |
 | Major sections run together | Add print CSS page breaks on `h1`/`h2`, excluding title |
 | Long doc hard to navigate | Generate TOC from headings in temp HTML/PDF build |
+| Preview sidebar index missing | Add PDF outline/bookmarks from headings; visible TOC alone is not enough |
 | TOC looks like bullet links | Replace raw `ul` bullets with styled `nav.toc`, ordered hierarchy, or table-style rows |
 | Source got changed | Stop. Restore source. Use temp build artifacts only |
 
-## TOC Style Requirements
+## Navigation Requirements
+
+Long PDFs need two navigation layers:
+
+1. **Visible TOC page/section** inside PDF content.
+2. **PDF outline/bookmarks** visible in Preview, Acrobat, browser sidebars, and other PDF readers.
+
+Do not treat these as interchangeable. A clickable TOC page does not create Preview sidebar entries.
+
+### Visible TOC Style
 
 For long PDFs, add a Table of Contents that looks intentional:
 
@@ -124,6 +135,28 @@ Example CSS pattern:
 }
 ```
 
+### PDF Outline / Bookmark Requirements
+
+Add document outline entries from headings:
+
+- Include document title.
+- Include major sections by default: usually `h1` title and `h2` sections, or `h1` sections when a doc uses multiple top-level headings.
+- Include `h3` only when nesting stays readable.
+- Keep labels clean: remove Markdown numbering artifacts if duplicated, trim whitespace, decode HTML entities.
+- Bookmarks must jump to correct section pages, not just page 1.
+- Prefer PDF generators that emit outlines natively. If using Puppeteer/Chrome and it does not emit outlines, postprocess the PDF with a PDF library that can add outlines/bookmarks.
+- If outline creation is unsupported by the available toolchain, say so explicitly in the output report instead of implying the TOC covers it.
+
+Validation options:
+
+```bash
+# If mutool is available
+mutool show output.pdf outline
+
+# If qpdf is available, inspect JSON for outline data
+qpdf --json output.pdf | rg -i 'outline|bookmark|title'
+```
+
 ## Validation Commands
 
 ```bash
@@ -163,6 +196,7 @@ Use:
 - Verifying only the first page.
 - Forgetting that many Markdown docs use `##` as major sections after one document `#` title.
 - Leaving auto-generated TOC as raw bullet points with blue underlined links.
+- Assuming a visible TOC creates PDF bookmarks. Preview sidebar index requires PDF outline entries.
 - Editing the source Markdown to make PDF conversion easier.
 
 ## Required Output Report
@@ -177,4 +211,5 @@ After conversion, report:
 - Whether any diagram pages were visually checked
 - Whether major sections start on new pages
 - Whether TOC was generated
+- Whether PDF outline/bookmarks were generated and how verified
 - Toolchain used
