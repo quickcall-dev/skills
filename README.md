@@ -54,6 +54,21 @@ npx skills add quickcall-dev/skills --skill doc
 
 </details>
 
+### Document Rendering
+
+<details>
+<summary><b>markdown-to-pdf</b> — Markdown to PDF export</summary>
+
+Convert Markdown docs to PDF with robust Mermaid diagram rendering, consistent styling, page breaks, TOC support, and no browser print headers or footers.
+
+**Use when:** exporting Markdown reports to PDF, especially when Mermaid diagrams render blank, oversized, colorless, or Chrome adds page headers/footers.
+
+```bash
+npx skills add quickcall-dev/skills --skill markdown-to-pdf
+```
+
+</details>
+
 ### Fleet Orchestration
 
 <details>
@@ -148,7 +163,8 @@ skills/
 ├── worktree-fleet/         # Git-worktree isolated workers
 ├── iterative-fleet/        # Reviewer-gated cycles
 ├── autoresearch-fleet/     # Autonomous research loop
-└── fleet-plan/             # Fleet config generator
+├── fleet-plan/             # Fleet config generator
+└── markdown-to-pdf/ # Markdown PDF export
 ```
 
 ### Shared Libraries (`_canonical/`)
