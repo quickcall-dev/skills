@@ -335,6 +335,34 @@ run_K() {
 }
 
 # -------------------------------------------------------------------
+# Scenario P10 — Pi session compaction is treated as terminal completion
+# (regression for finding where worker 21 was marked STUCK after compaction)
+# -------------------------------------------------------------------
+run_P10() {
+  local root; root=$(mkroot pi-P10)
+  bash "${FIXTURES_DIR}/setup-fleet.sh" completion "$root" >/dev/null
+  cat > "$root/workers/w1/session.jsonl" <<'JSONL'
+{"type":"session","version":3,"id":"fake-session","timestamp":"2026-07-06T20:00:00Z","cwd":"/tmp"}
+{"type":"message","id":"msg1","timestamp":"2026-07-06T20:00:01Z","message":{"role":"assistant","content":[{"type":"text","text":"Task complete"}],"api":"anthropic-messages","provider":"fake-pi","model":"kimi-for-coding","usage":{"input":100,"output":50,"cacheRead":0,"cacheWrite":0,"totalTokens":150,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"stop","timestamp":1783370401000}}
+{"type":"compaction","id":"comp1","parentId":"msg1","timestamp":"2026-07-06T20:04:54Z","summary":"Fleet completed","firstKeptEntryId":"msg1","tokensBefore":150}
+JSONL
+  jq '.workers += [{"id":"w2","task":"synthesis","provider":"pi","model":"kimi-for-coding","reasoning_effort":"medium","max_budget_usd":1.0,"depends_on":["w1"]}]' "$root/fleet.json" > "$root/fleet.json.tmp" && mv "$root/fleet.json.tmp" "$root/fleet.json"
+  local done_count; done_count=$(bash "${SCRIPTS}/status.sh" "$root" --json 2>/dev/null | jq '[.workers[] | select(.status == "DONE")] | length')
+  local deps_done=1
+  (
+    # shellcheck source=/dev/null
+    source "${SKILL_DIR}/lib/dag.sh"
+    dag_check_deps_done "w2" "$root" "$root/fleet.json"
+  ) || deps_done=0
+  if [[ "$done_count" == "1" && "$deps_done" == "1" ]]; then
+    record "P10 pi-compaction-terminal" PASS "(done=$done_count deps_done=$deps_done)"
+  else
+    record "P10 pi-compaction-terminal" FAIL "(done=$done_count deps_done=$deps_done)"
+  fi
+  cleanup_root "$root"
+}
+
+# -------------------------------------------------------------------
 # Run all scenarios
 # -------------------------------------------------------------------
 run_P1
@@ -346,6 +374,7 @@ run_P6
 run_P7
 run_P8
 run_P9
+run_P10
 run_E
 run_G
 run_K

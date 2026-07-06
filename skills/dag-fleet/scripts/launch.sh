@@ -366,6 +366,10 @@ has_terminal_event() {
   local jsonl="$1"
   local last_type
   last_type=$(tail -1 "${jsonl}" 2>/dev/null | jq -r '.type' 2>/dev/null || echo "")
+  # Pi session compaction: a compacted session is terminal (the agent finished
+  # and the context was summarized). This prevents completed Pi workers from
+  # being marked RUNNING/STUCK and unblocks downstream DAG dependencies.
+  [[ "${last_type}" == "compaction" ]] && return 0
   # Claude / Codex terminal events
   [[ "${last_type}" == "result" || "${last_type}" == "turn.completed" || "${last_type}" == "turn.failed" ]] && return 0
   # Pi: assistant message with stopReason == "stop"

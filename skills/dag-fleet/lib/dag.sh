@@ -182,7 +182,7 @@ for w in data.get("workers", []):
     local dep_jsonl="${fleet_root}/workers/${dep_id}/session.jsonl"
     if [[ -f "${fleet_root}/workers/${dep_id}/.done" ]]; then
       continue
-    elif [[ -f "${dep_jsonl}" ]] && (grep -q '"type":"result"' "${dep_jsonl}" 2>/dev/null || grep -q '"type":"turn.completed"' "${dep_jsonl}" 2>/dev/null || grep -q '"type":"turn.failed"' "${dep_jsonl}" 2>/dev/null); then
+    elif [[ -f "${dep_jsonl}" ]] && (grep -q '"type":"result"' "${dep_jsonl}" 2>/dev/null || grep -q '"type":"turn.completed"' "${dep_jsonl}" 2>/dev/null || grep -q '"type":"turn.failed"' "${dep_jsonl}" 2>/dev/null || grep -q '"type":"compaction"' "${dep_jsonl}" 2>/dev/null); then
       continue
     else
       return 1

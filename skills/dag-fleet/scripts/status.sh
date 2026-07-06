@@ -162,6 +162,45 @@ show_status() {
     fi
 
     if [[ -n "$log" && -f "$log" && -s "$log" ]]; then
+      # Shared pi cost accumulator: sums usage from ALL assistant messages
+      _pi_accumulate_cost() {
+        python3 - "$1" <<'PYEOF' 2>/dev/null || echo "0"
+import sys, json
+log = sys.argv[1]
+inp = outp = cache = 0
+cost_total = 0.0
+try:
+    with open(log) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+            except Exception:
+                continue
+            if ev.get("type") == "message":
+                msg = ev.get("message") or {}
+                if msg.get("role") == "assistant":
+                    u = msg.get("usage") or {}
+                    # Prefer real cost if present (non-zero)
+                    c = u.get("cost", {}).get("total", 0)
+                    if c and float(c) > 0:
+                        cost_total += float(c)
+                    else:
+                        inp += int(u.get("input") or 0)
+                        outp += int(u.get("output") or 0)
+                        cache += int(u.get("cacheRead") or 0)
+except Exception:
+    pass
+if cost_total > 0:
+    print(f"{round(cost_total, 4)}")
+else:
+    cost = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
+    print(f"{round(cost, 4)}")
+PYEOF
+      }
+
       # Derive status from session.jsonl last event
       local last_type last_subtype
       last_type=$(tail -1 "$log" 2>/dev/null | jq -r '.type // ""' 2>/dev/null || echo "")
@@ -204,44 +243,6 @@ print(f'{c:.2f}')
         local role stop_reason
         role=$(tail -1 "$log" 2>/dev/null | jq -r '.message.role // empty' 2>/dev/null || echo "")
         stop_reason=$(tail -1 "$log" 2>/dev/null | jq -r '.message.stopReason // empty' 2>/dev/null || echo "")
-        # Shared pi cost accumulator: sums usage from ALL assistant messages
-        _pi_accumulate_cost() {
-          python3 - "$1" <<'PYEOF' 2>/dev/null || echo "0"
-import sys, json
-log = sys.argv[1]
-inp = outp = cache = 0
-cost_total = 0.0
-try:
-    with open(log) as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                ev = json.loads(line)
-            except Exception:
-                continue
-            if ev.get("type") == "message":
-                msg = ev.get("message") or {}
-                if msg.get("role") == "assistant":
-                    u = msg.get("usage") or {}
-                    # Prefer real cost if present (non-zero)
-                    c = u.get("cost", {}).get("total", 0)
-                    if c and float(c) > 0:
-                        cost_total += float(c)
-                    else:
-                        inp += int(u.get("input") or 0)
-                        outp += int(u.get("output") or 0)
-                        cache += int(u.get("cacheRead") or 0)
-except Exception:
-    pass
-if cost_total > 0:
-    print(f"{round(cost_total, 4)}")
-else:
-    cost = (inp * 3.0 + outp * 15.0 + cache * 0.30) / 1_000_000.0
-    print(f"{round(cost, 4)}")
-PYEOF
-        }
         if [[ "$role" == "assistant" && "$stop_reason" == "stop" ]]; then
           status="DONE"
           done_count=$((done_count + 1))
@@ -281,6 +282,13 @@ PYEOF
           status="RUNNING"
           running=$((running + 1))
         fi
+      elif [[ "$last_type" == "compaction" ]]; then
+        # Pi session compaction: the session was compacted after the final
+        # assistant output. Treat it as terminal completion.
+        status="DONE"
+        done_count=$((done_count + 1))
+        cost=$(_pi_accumulate_cost "$log")
+        [[ -z "$cost" ]] && cost="0"
       else
         status="RUNNING"
         running=$((running + 1))
@@ -379,7 +387,7 @@ PYEOF
         # Only count as "really running" if the result is non-terminal
         # OR something has touched the log in the last 30s.
         local is_terminal=false
-        if [[ "$last_type" == "result" || "$last_type" == "turn.completed" || "$last_type" == "turn.failed" ]]; then
+        if [[ "$last_type" == "result" || "$last_type" == "turn.completed" || "$last_type" == "turn.failed" || "$last_type" == "compaction" ]]; then
           is_terminal=true
         elif [[ "$last_type" == "message" && "$role" == "assistant" && "$stop_reason" == "stop" ]]; then
           # Pi terminal event — assistant message with stopReason==stop
