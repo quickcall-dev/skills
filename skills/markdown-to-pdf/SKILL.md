@@ -1,6 +1,13 @@
 ---
 name: markdown-to-pdf
-description: Use when converting Markdown docs to PDF, especially when Mermaid diagrams render blank, oversized, lose color, or browser print adds page headers/footers
+description: Convert Markdown documents to styled PDF with robust Mermaid diagram rendering, TOC generation, and print-ready formatting. Use when exporting Markdown reports to PDF, especially when Mermaid diagrams render blank, oversized, lose color, or Chrome/Puppeteer adds unwanted page headers and footers.
+argument-hint: "[source.md] [output.pdf]"
+allowed-tools: Bash, Read, Write
+model: claude-sonnet-4-6
+license: Apache-2.0
+metadata:
+  author: Sagar Sarkale
+  version: "1.0"
 ---
 
 # Rendering Markdown PDF
