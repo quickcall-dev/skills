@@ -41,7 +41,8 @@ Do not use for plain text Markdown without diagrams.
 
 3. **Build HTML with print CSS**
    - Set `@page { margin: 0.55in; }`.
-   - Add a Table of Contents near the top for long documents. Generate it from headings in the temporary build, not by editing source Markdown. Links are preferred when supported.
+   - Add a designed Table of Contents near the top for long documents. Generate it from headings in the temporary build, not by editing source Markdown. Links are preferred when supported.
+   - Do not leave the TOC as raw Markdown bullets with awkward hyperlink styling. Render it as a polished `nav.toc`, ordered hierarchy, or table-style list with clean spacing, muted section numbers, and normal link text.
    - Use readable body width and table styles.
    - Start major sections on new pages. For docs where `##` are major sections, use `h2 { break-before: page; }` and exempt the first major section if needed. For true H1 sectioned docs, use `h1 { break-before: page; }` except the document title.
    - Set diagram CSS:
@@ -73,7 +74,55 @@ Do not use for plain text Markdown without diagrams.
 | Tables overflow | CSS `table-layout:auto`, smaller font, horizontal-safe widths |
 | Major sections run together | Add print CSS page breaks on `h1`/`h2`, excluding title |
 | Long doc hard to navigate | Generate TOC from headings in temp HTML/PDF build |
+| TOC looks like bullet links | Replace raw `ul` bullets with styled `nav.toc`, ordered hierarchy, or table-style rows |
 | Source got changed | Stop. Restore source. Use temp build artifacts only |
+
+## TOC Style Requirements
+
+For long PDFs, add a Table of Contents that looks intentional:
+
+- Place TOC after the document title and any short prefatory note.
+- Use heading text from source, but generate TOC in temp HTML/build artifacts only.
+- Prefer a `nav.toc` block with title `Table of Contents`.
+- Avoid default Markdown bullets. If using `ul`/`ol`, set `list-style: none` and create visual hierarchy with spacing/indentation.
+- Avoid ugly blue underlined links. Use document text color, subtle hover/print styling, and no text decoration in print.
+- Make each entry feel like one clean row: section number or level marker, title, optional page/anchor affordance.
+- Include top-level sections by default. Include second-level sections only when document is short enough or nested indentation stays readable.
+- Keep TOC compact: no more than two pages unless user asks for exhaustive navigation.
+
+Example CSS pattern:
+
+```css
+.toc {
+  margin: 1.5rem 0 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d8e0ee;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+.toc h2 {
+  margin: 0 0 0.75rem;
+  break-before: auto;
+}
+.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.toc li {
+  margin: 0.35rem 0;
+  line-height: 1.35;
+}
+.toc a {
+  color: #162033;
+  text-decoration: none;
+}
+.toc .toc-level-2 {
+  margin-left: 1rem;
+  color: #526173;
+  font-size: 0.95em;
+}
+```
 
 ## Validation Commands
 
@@ -113,6 +162,7 @@ Use:
 - Allowing Mermaid `foreignObject` HTML labels in PDF exports. They may show in browser but print as blank boxes.
 - Verifying only the first page.
 - Forgetting that many Markdown docs use `##` as major sections after one document `#` title.
+- Leaving auto-generated TOC as raw bullet points with blue underlined links.
 - Editing the source Markdown to make PDF conversion easier.
 
 ## Required Output Report
