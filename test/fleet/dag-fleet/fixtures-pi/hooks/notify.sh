@@ -1,1 +1,0 @@
-/home/sagar/skills/test/fleet/dag-fleet/fixtures-claude/hooks/notify.sh
