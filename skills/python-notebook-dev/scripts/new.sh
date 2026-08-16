@@ -55,7 +55,7 @@ class Config:
         output_dir: Directory where deterministic artifacts are written.
     """
 
-    output_dir: Path = PROJECT_ROOT / "outputs/$(date +%F)/$id-$slug"
+    output_dir: Path = PROJECT_ROOT / "outputs/$id-$slug"
 
 
 CONFIG = Config()

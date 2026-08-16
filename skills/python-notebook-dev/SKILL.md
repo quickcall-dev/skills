@@ -49,7 +49,7 @@ Use the project’s uv-backed kernel when working interactively. Do not create a
 ## Notebook Contract
 
 - One notebook has one objective and one clear output.
-- Use project-root-relative `data/` for inputs and dated `outputs/` for generated artifacts.
+- Use project-root-relative `data/` for inputs and mirrored `outputs/NNN-name-of-notebook/` for generated artifacts. Do not add date folders for notebook outputs.
 - Put imports, immutable config, seed setup, and logger creation in the first code cell.
 - Use markdown section cells before major logical blocks; state purpose, inputs, and outputs.
 - Avoid hidden state, magic commands, implicit working-directory assumptions, and out-of-order execution.
@@ -76,7 +76,7 @@ class Config:
     seed: int = 42
 
 
-CONFIG = Config(output_dir=Path("outputs/2026-01-01/001-example"))
+CONFIG = Config(output_dir=Path("outputs/001-example"))
 random.seed(CONFIG.seed)
 np.random.seed(CONFIG.seed)
 ```
@@ -143,7 +143,7 @@ Fail clearly by default. Do not write mock data into `data/` or overwrite a conf
 
 - Pin Python/dependencies in the project environment with `uv.lock` and record the notebook execution command.
 - Set all relevant random seeds in `Config`.
-- Record input paths, schema/version, parameters, seed, and output paths in a small run manifest when results matter.
+- Record input paths, schema/version, parameters, seed, and mirrored output paths in a small run manifest when results matter.
 - Use atomic writes where partial artifacts would mislead consumers.
 - Make reruns deterministic and explicit about overwrite/cleanup behavior.
 - Resolve paths from a known project root, not whichever directory opened the notebook.

@@ -97,5 +97,7 @@ grep -q 'Returns:' notebooks/001-tiny-notebook.py
 grep -q 'Raises:' notebooks/001-tiny-notebook.py
 (cd /tmp && python3 "$work/notebook/notebooks/001-tiny-notebook.py" >/dev/null)
 (cd /tmp && python3 "$work/notebook/notebooks/002-second-notebook.py" >/dev/null)
-test -n "$(find "$work/notebook/outputs" -name result.txt -print -quit)"
+test -f "$work/notebook/outputs/001-tiny-notebook/result.txt"
+test -f "$work/notebook/outputs/002-second-notebook/result.txt"
+test ! -d "$work/notebook/outputs/$(date +%F)"
 printf 'python skill smoke tests: PASS\n'
