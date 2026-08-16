@@ -23,6 +23,7 @@ grep -q 'Do not invent domain classes' "$repo_root/skills/python-code-dev/SKILL.
 mkdir "$work/code" && cd "$work/code"
 "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo'
 test -f tiny-demo/pyproject.toml
+grep -q 'requires-python = ">=3.12"' tiny-demo/pyproject.toml
 test -f tiny-demo/uv.lock
 test -f tiny-demo/src/tiny_demo/core/__init__.py
 test -f tiny-demo/src/tiny_demo/config/__init__.py
@@ -39,6 +40,7 @@ git init -q
 touch README.md
 "$repo_root/skills/python-code-dev/scripts/new.sh" 'agentgames'
 test -f pyproject.toml
+grep -q 'requires-python = ">=3.12"' pyproject.toml
 test -f uv.lock
 test -f src/agentgames/core/__init__.py
 test ! -e agentgames/src/agentgames

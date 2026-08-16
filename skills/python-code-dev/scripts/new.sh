@@ -57,7 +57,7 @@ cat > "$root/pyproject.toml" <<EOF
 name = "$dir_name"
 version = "0.1.0"
 description = "Class-first Python project"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = []
 
 [dependency-groups]

@@ -66,7 +66,7 @@ Keep domain modules under `src/project_name/`, never under a package literally n
 
 The generated project must:
 
-- use `src/<import_name>/` layout, valid `pyproject.toml`, and committed `uv.lock`;
+- use `src/<import_name>/` layout, valid `pyproject.toml` with `requires-python = ">=3.12"`, and committed `uv.lock`;
 - import successfully from outside the repository root with `uv run`;
 - include one small class with a typed method and one passing test;
 - include `Config` as `@dataclass(frozen=True)` when configuration is needed;
@@ -87,7 +87,7 @@ Project names become directories and import names: lowercase, non-alphanumeric c
 
 ## Packaging and Imports
 
-Use a supported Python version in `pyproject.toml`, declare runtime/dev dependencies, and use `uv` for every environment and command:
+Use Python 3.12 or newer. Set `requires-python = ">=3.12"` in `pyproject.toml`, declare runtime/dev dependencies, and use `uv` for every environment and command:
 
 ```bash
 uv sync
