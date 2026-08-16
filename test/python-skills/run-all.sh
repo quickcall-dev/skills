@@ -86,15 +86,16 @@ test ! -e agentgames/src/agentgames
 mkdir "$work/notebook" && cd "$work/notebook"
 "$repo_root/skills/python-notebook-dev/scripts/new.sh" 'Tiny Notebook'
 "$repo_root/skills/python-notebook-dev/scripts/new.sh" 'Second Notebook'
-test -f notebooks/001-tiny-notebook/tiny_notebook.py
-test -f notebooks/002-second-notebook/second_notebook.py
+test -f notebooks/001-tiny-notebook.py
+test -f notebooks/002-second-notebook.py
+test ! -d notebooks/001-tiny-notebook
 test ! -f notebooks/tiny_notebook.py
-grep -q 'class Experiment' notebooks/001-tiny-notebook/tiny_notebook.py
-grep -q 'Attributes:' notebooks/001-tiny-notebook/tiny_notebook.py
-grep -q 'Args:' notebooks/001-tiny-notebook/tiny_notebook.py
-grep -q 'Returns:' notebooks/001-tiny-notebook/tiny_notebook.py
-grep -q 'Raises:' notebooks/001-tiny-notebook/tiny_notebook.py
-(cd /tmp && python3 "$work/notebook/notebooks/001-tiny-notebook/tiny_notebook.py" >/dev/null)
-(cd /tmp && python3 "$work/notebook/notebooks/002-second-notebook/second_notebook.py" >/dev/null)
+grep -q 'class Experiment' notebooks/001-tiny-notebook.py
+grep -q 'Attributes:' notebooks/001-tiny-notebook.py
+grep -q 'Args:' notebooks/001-tiny-notebook.py
+grep -q 'Returns:' notebooks/001-tiny-notebook.py
+grep -q 'Raises:' notebooks/001-tiny-notebook.py
+(cd /tmp && python3 "$work/notebook/notebooks/001-tiny-notebook.py" >/dev/null)
+(cd /tmp && python3 "$work/notebook/notebooks/002-second-notebook.py" >/dev/null)
 test -n "$(find "$work/notebook/outputs" -name result.txt -print -quit)"
 printf 'python skill smoke tests: PASS\n'

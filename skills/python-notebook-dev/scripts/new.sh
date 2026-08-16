@@ -8,8 +8,7 @@ fi
 
 name="$1"
 slug="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | sed -E 's/[_ ]+/-/g; s/[^a-z0-9-]+//g; s/-+/-/g; s/^-+//; s/-+$//' | cut -c1-50 | sed -E 's/-+$//')"
-stem="$(printf '%s' "$slug" | tr '-' '_')"
-if [[ -z "$slug" || -z "$stem" ]]; then
+if [[ -z "$slug" ]]; then
   printf 'notebook name must contain letters or numbers\n' >&2
   exit 2
 fi
@@ -17,8 +16,8 @@ fi
 mkdir -p notebooks
 shopt -s nullglob
 next=1
-for path in notebooks/[0-9][0-9][0-9]-*; do
-  [[ -d "$path" ]] || continue
+for path in notebooks/[0-9][0-9][0-9]-* notebooks/[0-9][0-9][0-9]-*.py; do
+  [[ -e "$path" ]] || continue
   prefix="${path##*/}"; prefix="${prefix%%-*}"
   [[ "$prefix" =~ ^[0-9]{3}$ ]] || continue
   value=$((10#$prefix + 1))
@@ -26,13 +25,10 @@ for path in notebooks/[0-9][0-9][0-9]-*; do
 done
 while :; do
   id="$(printf '%03d' "$next")"
-  dir="$PWD/notebooks/$id-$slug"
-  [[ ! -e "$dir" ]] && break
+  file="$PWD/notebooks/$id-$slug.py"
+  [[ ! -e "$file" ]] && break
   next=$((next + 1))
 done
-
-mkdir -p "$dir"
-file="$dir/$stem.py"
 cat > "$file" <<EOF
 # %% [markdown]
 # # $name
@@ -44,7 +40,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-PROJECT_ROOT = (Path(__file__).resolve().parents[2]
+PROJECT_ROOT = (Path(__file__).resolve().parents[1]
                 if "__file__" in globals() else Path.cwd())
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")

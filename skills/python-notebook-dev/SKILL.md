@@ -24,16 +24,16 @@ For `new`, this is a script-only workflow: run `${AGENTS_SKILLS_DIR}/scripts/new
 
 ## Deterministic Naming
 
-Every notebook path MUST match `notebooks/NNN-slug/snake_stem.py`. Do not create or keep loose notebooks such as `notebooks/foo.py`, `foo.py`, or `analysis.ipynb` unless the human explicitly requests an archive/import operation. Adapt loose files by moving them into the required numbered folder before changing content.
+Every notebook path MUST match `notebooks/NNN-name-of-notebook.py`. Do not create folders per notebook. Do not create or keep loose notebooks such as `notebooks/foo.py`, `foo.py`, or `analysis.ipynb` unless the human explicitly requests an archive/import operation. Adapt loose files by moving/renaming them into the required numbered file path before changing content.
 
-New notebooks use `notebooks/NNN-slug/notebook_name.py`:
+New notebooks use `notebooks/NNN-slug.py`:
 
-- `NNN` is one greater than the highest existing three-digit folder prefix; start at `001`.
+- `NNN` is one greater than the highest existing three-digit notebook prefix; start at `001`.
 - If the candidate exists, increment until free. Never reuse or overwrite an experiment number.
-- Folder slug: lowercase; spaces/underscores become `-`; remove other characters; collapse hyphens; trim; max 50 chars.
-- File stem: safe lowercase `snake_case`, max 50 chars.
+- Slug: lowercase; spaces/underscores become `-`; remove other characters; collapse hyphens; trim; max 50 chars.
+- File name keeps slug hyphenated. Do not convert it to snake_case.
 
-Example: `Customer Churn EDA` → `notebooks/001-customer-churn-eda/customer_churn_eda.py`.
+Example: `Customer Churn EDA` → `notebooks/001-customer-churn-eda.py`.
 
 ## Environment
 
@@ -41,7 +41,7 @@ Use `uv` for every Python environment and command. Project notebooks should have
 
 ```bash
 uv sync
-uv run python notebooks/001-example/example.py
+uv run python notebooks/001-example.py
 ```
 
 Use the project’s uv-backed kernel when working interactively. Do not create ad-hoc virtualenvs or install dependencies with `pip`.
@@ -170,7 +170,7 @@ Exact cell count is not mandatory; checks must match notebook outputs.
 
 ## Adapt Workflow
 
-`adapt` audits first, preserves behavior, then changes structure in small steps. Do not create or keep loose notebook paths during adapt; final path must match `notebooks/NNN-slug/snake_stem.py`.
+`adapt` audits first, preserves behavior, then changes structure in small steps. Do not create or keep loose notebook paths during adapt; final path must match `notebooks/NNN-slug.py`.
 
 1. Inspect cell order, hidden state, magics, side effects, inputs, and outputs.
 2. Move imports/config/seeds to the first cell; add section markdown.
