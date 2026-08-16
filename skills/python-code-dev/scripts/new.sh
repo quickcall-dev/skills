@@ -5,6 +5,10 @@ if [[ $# -ne 1 || -z "$1" ]]; then
   printf 'usage: %s <project-name>\n' "$0" >&2
   exit 2
 fi
+if ! command -v uv >/dev/null 2>&1; then
+  printf 'uv is required; install uv before scaffolding a project\n' >&2
+  exit 127
+fi
 
 name="$1"
 dir_name="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
@@ -30,12 +34,9 @@ if [[ -e "$root" ]]; then
   exit 1
 fi
 
-mkdir -p "$root/src/$import_name" "$root/tests"
+package="$root/src/$import_name"
+mkdir -p "$package/config" "$package/core" "$package/schemas" "$package/utils" "$root/tests"
 cat > "$root/pyproject.toml" <<EOF
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "$dir_name"
 version = "0.1.0"
@@ -43,8 +44,12 @@ description = "Class-first Python project"
 requires-python = ">=3.11"
 dependencies = []
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -54,23 +59,28 @@ cat > "$root/README.md" <<EOF
 
 ## Setup
 
-    python -m venv .venv
-    . .venv/bin/activate
-    python -m pip install -e '.[dev]'
+    uv sync
 
 ## Verify
 
-    python -m pytest
+    uv run pytest
 EOF
-cat > "$root/src/$import_name/__init__.py" <<EOF
+cat > "$package/__init__.py" <<EOF
 """Public package for $dir_name."""
 
 from .core import ExampleService
 
 __all__ = ["ExampleService"]
 EOF
-cat > "$root/src/$import_name/config.py" <<'EOF'
-"""Immutable project configuration."""
+cat > "$package/config/__init__.py" <<'EOF'
+"""Configuration package."""
+
+from .settings import Config
+
+__all__ = ["Config"]
+EOF
+cat > "$package/config/settings.py" <<'EOF'
+"""Immutable runtime configuration."""
 
 from dataclasses import dataclass
 
@@ -81,8 +91,15 @@ class Config:
 
     name: str = "default"
 EOF
-cat > "$root/src/$import_name/core.py" <<'EOF'
-"""Primary domain components."""
+cat > "$package/core/__init__.py" <<'EOF'
+"""Core domain package."""
+
+from .service import ExampleService
+
+__all__ = ["ExampleService"]
+EOF
+cat > "$package/core/service.py" <<'EOF'
+"""Core domain services."""
 
 
 class ExampleService:
@@ -94,8 +111,15 @@ class ExampleService:
             raise ValueError("name must not be empty")
         return f"Hello, {name}!"
 EOF
-cat > "$root/src/$import_name/schemas.py" <<'EOF'
-"""Data contracts for project boundaries."""
+cat > "$package/schemas/__init__.py" <<'EOF'
+"""Boundary schemas package."""
+
+from .contracts import Greeting
+
+__all__ = ["Greeting"]
+EOF
+cat > "$package/schemas/contracts.py" <<'EOF'
+"""Data contracts for package boundaries."""
 
 from dataclasses import dataclass
 
@@ -106,8 +130,15 @@ class Greeting:
 
     text: str
 EOF
-cat > "$root/src/$import_name/utils.py" <<'EOF'
-"""Small cross-cutting helpers without domain logic."""
+cat > "$package/utils/__init__.py" <<'EOF'
+"""Cross-cutting utilities package."""
+
+from .logging import get_logger
+
+__all__ = ["get_logger"]
+EOF
+cat > "$package/utils/logging.py" <<'EOF'
+"""Logging helpers without domain logic."""
 
 import logging
 
@@ -117,7 +148,7 @@ def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
 EOF
 cat > "$root/tests/test_core.py" <<EOF
-from $import_name import ExampleService
+from $import_name.core import ExampleService
 
 
 def test_greet() -> None:
@@ -130,4 +161,5 @@ def test_package_imports() -> None:
 
     assert $import_name.ExampleService
 EOF
+(cd "$root" && uv lock --quiet)
 printf '%s\n' "$root"

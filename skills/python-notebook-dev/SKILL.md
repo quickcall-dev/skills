@@ -33,6 +33,17 @@ New notebooks use `notebooks/NNN-slug/notebook_name.py`:
 
 Example: `Customer Churn EDA` → `notebooks/001-customer-churn-eda/customer_churn_eda.py`.
 
+## Environment
+
+Use `uv` for every Python environment and command. Project notebooks should have a `pyproject.toml`:
+
+```bash
+uv sync
+uv run python notebooks/001-example/example.py
+```
+
+Use the project’s uv-backed kernel when working interactively. Do not create ad-hoc virtualenvs or install dependencies with `pip`.
+
 ## Notebook Contract
 
 - One notebook has one objective and one clear output.
@@ -112,7 +123,7 @@ Fail clearly by default. Do not write mock data into `data/` or overwrite a conf
 
 ## Reproducibility and Safety
 
-- Pin Python/dependencies in the project environment and record the notebook execution command.
+- Pin Python/dependencies in the project environment with `uv.lock` and record the notebook execution command.
 - Set all relevant random seeds in `Config`.
 - Record input paths, schema/version, parameters, seed, and output paths in a small run manifest when results matter.
 - Use atomic writes where partial artifacts would mislead consumers.

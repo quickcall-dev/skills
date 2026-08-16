@@ -29,13 +29,22 @@ For `new`, run `${AGENTS_SKILLS_DIR}/scripts/new.sh "<project-name>"` when avail
 ```text
 project-name/
 ├── pyproject.toml
+├── uv.lock
 ├── README.md
 ├── src/project_name/
 │   ├── __init__.py
-│   ├── config.py       # frozen runtime/config objects
-│   ├── core.py         # primary domain service/class
-│   ├── schemas.py      # input/output dataclasses and contracts
-│   └── utils.py        # small cross-cutting helpers only
+│   ├── config/
+│   │   ├── __init__.py
+│   │   └── settings.py    # frozen runtime/config objects
+│   ├── core/
+│   │   ├── __init__.py
+│   │   └── service.py     # primary domain service/class
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   └── contracts.py   # input/output dataclasses and contracts
+│   └── utils/
+│       ├── __init__.py
+│       └── logging.py      # small cross-cutting helpers only
 └── tests/
     ├── test_core.py
     └── test_smoke.py
@@ -47,8 +56,8 @@ Keep domain modules under `src/project_name/`, never under a package literally n
 
 The generated project must:
 
-- use `src/<import_name>/` layout and a valid `pyproject.toml`;
-- import successfully from outside the repository root after editable install;
+- use `src/<import_name>/` layout, valid `pyproject.toml`, and committed `uv.lock`;
+- import successfully from outside the repository root with `uv run`;
 - include one small class with a typed method and one passing test;
 - include `Config` as `@dataclass(frozen=True)` when configuration is needed;
 - use explicit paths/config passed into constructors and methods;
@@ -68,13 +77,11 @@ Project names become directories and import names: lowercase, non-alphanumeric c
 
 ## Packaging and Imports
 
-Use a supported Python version in `pyproject.toml`, declare runtime/dev dependencies, and use an editable install during development:
+Use a supported Python version in `pyproject.toml`, declare runtime/dev dependencies, and use `uv` for every environment and command:
 
 ```bash
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install -e '.[dev]'
-python -m pytest
+uv sync
+uv run pytest
 ```
 
 Import the installed project package, not `src`:
@@ -127,10 +134,10 @@ Never delete the source notebook merely because duplicated implementation moved.
 `verify` runs the applicable checks from a clean environment. Replace `project_name` with actual import name:
 
 ```bash
-python -m pip install -e '.[dev]'
-python -m compileall src tests
-python -m pytest
-python -c 'import project_name'
+uv sync
+uv run python -m compileall src tests
+uv run pytest
+uv run python -c 'import project_name'
 ```
 
 Also check formatting/lint/type commands declared in `pyproject.toml`, test imports from outside repo root, and report skipped checks with reasons. Never claim success without command output.

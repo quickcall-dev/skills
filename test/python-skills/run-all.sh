@@ -16,9 +16,14 @@ done
 mkdir "$work/code" && cd "$work/code"
 "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo'
 test -f tiny-demo/pyproject.toml
-test -f tiny-demo/src/tiny_demo/core.py
+test -f tiny-demo/uv.lock
+test -f tiny-demo/src/tiny_demo/core/__init__.py
+test -f tiny-demo/src/tiny_demo/config/__init__.py
+test -f tiny-demo/src/tiny_demo/schemas/__init__.py
+test -f tiny-demo/src/tiny_demo/utils/__init__.py
 test -f tiny-demo/tests/test_core.py
-(cd tiny-demo && PYTHONPATH=src python3 -c 'from tiny_demo import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"')
+grep -q 'uv sync' tiny-demo/README.md
+(cd tiny-demo && uv sync --quiet && uv run pytest -q && uv run python -c 'from tiny_demo.core import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"')
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo' >/dev/null 2>&1
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" '42' >/dev/null 2>&1
 
