@@ -69,6 +69,38 @@ npx skills add quickcall-dev/skills --skill markdown-to-pdf
 
 </details>
 
+### Python Development
+
+<details>
+<summary><b>python-code-dev</b> — class-first Python packages</summary>
+
+Create importable `src/<package>/` projects, adapt existing code, migrate notebooks, and verify tests/imports.
+
+**Use when:** starting Python projects, structuring reusable modules, or graduating notebook logic.
+
+**Commands:** `new`, `adapt`, `migrate`, `verify`
+
+```bash
+npx skills add quickcall-dev/skills --skill python-code-dev
+```
+
+</details>
+
+<details>
+<summary><b>python-notebook-dev</b> — reproducible numbered notebooks</summary>
+
+Create deterministic `notebooks/NNN-slug/` experiments, adapt notebooks, migrate logic to packages, and verify clean-kernel execution.
+
+**Use when:** creating or editing `# %%` Python notebooks or running focused experiments.
+
+**Commands:** `new`, `adapt`, `migrate`, `verify`
+
+```bash
+npx skills add quickcall-dev/skills --skill python-notebook-dev
+```
+
+</details>
+
 ### Fleet Orchestration
 
 <details>
