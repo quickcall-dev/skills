@@ -14,6 +14,9 @@ done
 grep -q 'Flatten Nested Generated Projects' "$repo_root/skills/python-code-dev/SKILL.md"
 grep -q 'Do not touch `docs/` or `.fleet/`' "$repo_root/skills/python-code-dev/SKILL.md"
 grep -q 'rm -rf' "$repo_root/skills/python-code-dev/SKILL.md"
+grep -q 'script-only workflow' "$repo_root/skills/python-code-dev/SKILL.md"
+grep -q 'Do not hand-scaffold' "$repo_root/skills/python-code-dev/SKILL.md"
+grep -q 'Do not invent domain classes' "$repo_root/skills/python-code-dev/SKILL.md"
 ! test -e "$repo_root/skills/code-development"
 ! test -e "$repo_root/skills/notebook-development"
 

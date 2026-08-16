@@ -20,11 +20,21 @@ Build maintainable, importable Python packages with classes as the default bound
 | `/python-code-dev migrate <notebook.py>` | Move notebook logic into the package and update notebook imports |
 | `/python-code-dev verify <path>` | Run package, import, test, and quality checks |
 
-For `new`, run `${AGENTS_SKILLS_DIR}/scripts/new.sh "<project-name>"` when available. If the current directory already looks like a project root (`.git`, `README.md`, `pyproject.toml`, `docs/`, or `.fleet/`), scaffold in place as `./src/<package>/` and `./tests/`. Otherwise create `<project-name>/src/<package>/`. Refuse overwrites. `adapt`, `migrate`, and `verify` are agent-run workflows: inspect the target, make reviewed edits, then run declared checks.
+`new` is a script-only workflow. Do not hand-scaffold it.
+
+For `new`, run the skill script:
+
+```bash
+bash /path/to/python-code-dev/scripts/new.sh "<project-name>"
+```
+
+Resolve `/path/to/python-code-dev` from the loaded skill location. If the harness exposes `AGENTS_SKILLS_DIR`, use `${AGENTS_SKILLS_DIR}/scripts/new.sh`; otherwise use the path shown in the skill header/location. If the script cannot be found, STOP and report the missing script. Do not manually create files as a fallback.
+
+If the current directory already looks like a project root (`.git`, `README.md`, `pyproject.toml`, `docs/`, or `.fleet/`), the script scaffolds in place as `./src/<package>/` and `./tests/`. Otherwise it creates `<project-name>/src/<package>/`. It refuses overwrites. `adapt`, `migrate`, and `verify` are agent-run workflows: inspect the target, make reviewed edits, then run declared checks.
 
 ## Starter Layout
 
-`new` creates this class-first baseline:
+`new` creates this class-first baseline. Do not invent domain classes, product concepts, CLIs, configs, or schemas beyond this starter; customization happens after the user asks.
 
 ```text
 project-name/
@@ -177,4 +187,4 @@ Also check formatting/lint/type commands declared in `pyproject.toml`, test impo
 
 ## Anti-Patterns
 
-Never use `assert` for input validation, import from `src`, hide domain logic in `utils`, hardcode credentials, silently create fake production data, depend on notebook globals, or delete source artifacts without explicit approval. `scripts/` is allowed for thin operational wrappers; it must not contain business logic.
+Never use `assert` for input validation, import from `src`, hide domain logic in `utils`, hardcode credentials, silently create fake production data, depend on notebook globals, or delete source artifacts without explicit approval. Do not hand-scaffold `new`; run the script or stop. Do not invent domain classes during scaffolding. `scripts/` is allowed for thin operational wrappers; it must not contain business logic.
