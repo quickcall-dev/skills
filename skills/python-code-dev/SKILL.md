@@ -43,26 +43,39 @@ project-name/
 ├── README.md
 ├── src/project_name/
 │   ├── __init__.py
-│   ├── config/
+│   ├── configs/
 │   │   ├── __init__.py
-│   │   └── settings.py    # frozen runtime/config objects
+│   │   ├── env.py          # environment access helpers
+│   │   └── paths.py        # repo/output/log path helpers
 │   ├── core/
 │   │   ├── __init__.py
-│   │   └── service.py     # primary domain service/class
+│   │   ├── context.py      # RunContext dataclass
+│   │   ├── runner.py       # BaseRunner + ExampleRunner
+│   │   └── service.py      # primary domain service/class
+│   ├── runner/
+│   │   ├── __init__.py
+│   │   └── cli.py          # runnable e2e CLI
 │   ├── schemas/
 │   │   ├── __init__.py
-│   │   └── contracts.py   # input/output dataclasses and contracts
+│   │   └── contracts.py    # input/output dataclasses and contracts
 │   └── utils/
 │       ├── __init__.py
-│       └── logging.py      # small cross-cutting helpers only
+│       ├── atomic.py       # atomic writes
+│       ├── ids.py          # run IDs
+│       └── logging.py      # stdout/file logging
 └── tests/
-    ├── config/
-    │   └── test_settings.py
+    ├── configs/
+    │   └── test_paths.py
     ├── core/
+    │   ├── test_runner.py
     │   └── test_service.py
+    ├── runner/
+    │   └── test_cli.py
     ├── schemas/
     │   └── test_contracts.py
     ├── utils/
+    │   ├── test_atomic.py
+    │   ├── test_ids.py
     │   └── test_logging.py
     └── test_smoke.py
 ```
@@ -75,7 +88,7 @@ The generated project must:
 
 - use `src/<import_name>/` layout, valid `pyproject.toml` with `requires-python = ">=3.12"`, and committed `uv.lock`;
 - import successfully from outside the repository root with `uv run`;
-- include strict type-checker config (`[tool.pyright] typeCheckingMode = "strict"`), one small class with a typed method, and passing mirrored tests;
+- include strict type-checker config (`[tool.pyright] typeCheckingMode = "strict"`), one small class with a typed method, reusable logger/config/path/atomic/run helpers, an e2e CLI runner, and passing mirrored tests;
 - include `Config` as `@dataclass(frozen=True)` when configuration is needed;
 - use explicit paths/config passed into constructors and methods;
 - include no network calls, secrets, fake production data, or destructive actions;

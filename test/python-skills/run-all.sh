@@ -28,20 +28,29 @@ grep -q '\[tool.pyright\]' tiny-demo/pyproject.toml
 grep -q 'typeCheckingMode = "strict"' tiny-demo/pyproject.toml
 test -f tiny-demo/uv.lock
 test -f tiny-demo/src/tiny_demo/core/__init__.py
-test -f tiny-demo/src/tiny_demo/config/__init__.py
 test -f tiny-demo/src/tiny_demo/schemas/__init__.py
 test -f tiny-demo/src/tiny_demo/utils/__init__.py
+test -f tiny-demo/src/tiny_demo/utils/atomic.py
+test -f tiny-demo/src/tiny_demo/utils/ids.py
+test -f tiny-demo/src/tiny_demo/utils/logging.py
+test -f tiny-demo/src/tiny_demo/configs/env.py
+test -f tiny-demo/src/tiny_demo/configs/paths.py
+test -f tiny-demo/src/tiny_demo/core/context.py
+test -f tiny-demo/src/tiny_demo/core/runner.py
+test -f tiny-demo/src/tiny_demo/runner/cli.py
 test -f tiny-demo/tests/core/test_service.py
-test -f tiny-demo/tests/config/test_settings.py
 test -f tiny-demo/tests/schemas/test_contracts.py
 test -f tiny-demo/tests/utils/test_logging.py
+test -f tiny-demo/tests/utils/test_atomic.py
+test -f tiny-demo/tests/utils/test_ids.py
+test -f tiny-demo/tests/configs/test_paths.py
+test -f tiny-demo/tests/runner/test_cli.py
 grep -q 'uv sync' tiny-demo/README.md
 grep -q 'Args:' tiny-demo/src/tiny_demo/core/service.py
 grep -q 'Returns:' tiny-demo/src/tiny_demo/core/service.py
 grep -q 'Raises:' tiny-demo/src/tiny_demo/core/service.py
-grep -q 'Attributes:' tiny-demo/src/tiny_demo/config/settings.py
 grep -q 'Attributes:' tiny-demo/src/tiny_demo/schemas/contracts.py
-(cd tiny-demo && uv sync --quiet && uv run pytest -q && uv run python -c 'from tiny_demo.core import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"')
+(cd tiny-demo && uv sync --quiet && uv run pytest -q && uv run python -c 'from tiny_demo.core import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"' && uv run python -m tiny_demo.runner.cli --message hello)
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo' >/dev/null 2>&1
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" '42' >/dev/null 2>&1
 
@@ -54,7 +63,6 @@ grep -q 'requires-python = ">=3.12"' pyproject.toml
 test -f uv.lock
 test -f src/agentgames/core/__init__.py
 test -f tests/core/test_service.py
-test -f tests/config/test_settings.py
 test -f tests/schemas/test_contracts.py
 test -f tests/utils/test_logging.py
 test ! -e agentgames/src/agentgames

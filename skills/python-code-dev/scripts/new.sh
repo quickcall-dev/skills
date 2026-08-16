@@ -10,9 +10,18 @@ if ! command -v uv >/dev/null 2>&1; then
   exit 127
 fi
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+skill_dir="$(cd "$script_dir/.." && pwd)"
+template_dir="$skill_dir/templates/package"
+if [[ ! -d "$template_dir" ]]; then
+  printf 'missing template directory: %s\n' "$template_dir" >&2
+  exit 1
+fi
+
 name="$1"
 dir_name="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
 import_name="$(printf '%s' "$dir_name" | tr '-' '_')"
+package_upper="$(printf '%s' "$import_name" | tr '[:lower:]' '[:upper:]')"
 if [[ -z "$dir_name" || -z "$import_name" ]]; then
   printf 'project name must contain letters or numbers\n' >&2
   exit 2
@@ -50,16 +59,7 @@ else
   fi
 fi
 
-package="$root/src/$import_name"
-mkdir -p \
-  "$package/config" \
-  "$package/core" \
-  "$package/schemas" \
-  "$package/utils" \
-  "$root/tests/config" \
-  "$root/tests/core" \
-  "$root/tests/schemas" \
-  "$root/tests/utils"
+mkdir -p "$root"
 cat > "$root/pyproject.toml" <<EOF
 [project]
 name = "$dir_name"
@@ -93,163 +93,31 @@ cat > "$root/README.md" <<EOF
 ## Verify
 
     uv run pytest
+
+## Run
+
+    uv run python -m $import_name.runner.cli --message hello
 EOF
-cat > "$package/__init__.py" <<EOF
-"""Public package for $dir_name."""
 
-from .core import ExampleService
+mkdir -p "$root/src" "$root/tests"
+cp -R "$template_dir/src/__package__" "$root/src/$import_name"
+cp -R "$template_dir/tests/." "$root/tests/"
 
-__all__ = ["ExampleService"]
-EOF
-cat > "$package/config/__init__.py" <<'EOF'
-"""Configuration package."""
+python3 - "$root" "$import_name" "$dir_name" "$package_upper" <<'PY'
+from pathlib import Path
+import sys
 
-from .settings import Config
+root = Path(sys.argv[1])
+package = sys.argv[2]
+project = sys.argv[3]
+package_upper = sys.argv[4]
+for path in list((root / "src" / package).rglob("*.py")) + list((root / "tests").rglob("*.py")):
+    text = path.read_text(encoding="utf-8")
+    text = text.replace("__PACKAGE_UPPER__", package_upper)
+    text = text.replace("__PACKAGE__", package)
+    text = text.replace("__PROJECT__", project)
+    path.write_text(text, encoding="utf-8")
+PY
 
-__all__ = ["Config"]
-EOF
-cat > "$package/config/settings.py" <<'EOF'
-"""Immutable runtime configuration."""
-
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class Config:
-    """Runtime configuration for project components.
-
-    Attributes:
-        name: Optional. Human-readable runtime name. Defaults to "default".
-    """
-
-    name: str = "default"
-EOF
-cat > "$package/core/__init__.py" <<'EOF'
-"""Core domain package."""
-
-from .service import ExampleService
-
-__all__ = ["ExampleService"]
-EOF
-cat > "$package/core/service.py" <<'EOF'
-"""Core domain services."""
-
-
-class ExampleService:
-    """Provide a small class that is safe to extend.
-
-    Methods:
-        greet: Return a greeting for a required name.
-    """
-
-    def greet(self, name: str) -> str:
-        """Return a greeting for a required name.
-
-        Args:
-            name: Required. Non-empty name to greet.
-
-        Returns:
-            Greeting string formatted as ``Hello, <name>!``.
-
-        Raises:
-            ValueError: If ``name`` is empty or whitespace only.
-        """
-        if not name.strip():
-            raise ValueError("name must not be empty")
-        return f"Hello, {name}!"
-EOF
-cat > "$package/schemas/__init__.py" <<'EOF'
-"""Boundary schemas package."""
-
-from .contracts import Greeting
-
-__all__ = ["Greeting"]
-EOF
-cat > "$package/schemas/contracts.py" <<'EOF'
-"""Data contracts for package boundaries."""
-
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class Greeting:
-    """Represent a generated greeting.
-
-    Attributes:
-        text: Required. Greeting text.
-    """
-
-    text: str
-EOF
-cat > "$package/utils/__init__.py" <<'EOF'
-"""Cross-cutting utilities package."""
-
-from .logging import get_logger
-
-__all__ = ["get_logger"]
-EOF
-cat > "$package/utils/logging.py" <<'EOF'
-"""Logging helpers without domain logic."""
-
-import logging
-
-
-def get_logger(name: str) -> logging.Logger:
-    """Return module logger; configuration belongs to entrypoints.
-
-    Args:
-        name: Required. Logger name, usually ``__name__``.
-
-    Returns:
-        Logger instance with the requested name.
-    """
-    return logging.getLogger(name)
-EOF
-cat > "$root/tests/config/test_settings.py" <<EOF
-from $import_name.config import Config
-
-
-def test_config_defaults() -> None:
-    assert Config().name == "default"
-EOF
-cat > "$root/tests/core/test_service.py" <<EOF
-import pytest
-
-from $import_name.core import ExampleService
-
-
-def test_greet() -> None:
-    assert ExampleService().greet("Kimi") == "Hello, Kimi!"
-
-
-def test_greet_rejects_blank_name() -> None:
-    with pytest.raises(ValueError, match="name must not be empty"):
-        ExampleService().greet(" ")
-EOF
-cat > "$root/tests/schemas/test_contracts.py" <<EOF
-from $import_name.schemas import Greeting
-
-
-def test_greeting_contract() -> None:
-    assert Greeting(text="Hello").text == "Hello"
-EOF
-cat > "$root/tests/utils/test_logging.py" <<EOF
-import logging
-
-from $import_name.utils import get_logger
-
-
-def test_get_logger_returns_named_logger() -> None:
-    logger = get_logger("test.logger")
-    assert isinstance(logger, logging.Logger)
-    assert logger.name == "test.logger"
-EOF
-cat > "$root/tests/test_smoke.py" <<EOF
-
-def test_package_imports() -> None:
-    import $import_name
-
-    assert $import_name.ExampleService
-EOF
 (cd "$root" && uv lock --quiet)
 printf '%s\n' "$root"
