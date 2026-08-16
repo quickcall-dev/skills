@@ -77,6 +77,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+include = ["src", "tests"]
 EOF
 cat > "$root/README.md" <<EOF
 # $dir_name
@@ -111,7 +116,11 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Config:
-    """Runtime configuration for project components."""
+    """Runtime configuration for project components.
+
+    Attributes:
+        name: Optional. Human-readable runtime name. Defaults to "default".
+    """
 
     name: str = "default"
 EOF
@@ -127,10 +136,24 @@ cat > "$package/core/service.py" <<'EOF'
 
 
 class ExampleService:
-    """Provide a small class that is safe to extend."""
+    """Provide a small class that is safe to extend.
+
+    Methods:
+        greet: Return a greeting for a required name.
+    """
 
     def greet(self, name: str) -> str:
-        """Return a greeting for a required name."""
+        """Return a greeting for a required name.
+
+        Args:
+            name: Required. Non-empty name to greet.
+
+        Returns:
+            Greeting string formatted as ``Hello, <name>!``.
+
+        Raises:
+            ValueError: If ``name`` is empty or whitespace only.
+        """
         if not name.strip():
             raise ValueError("name must not be empty")
         return f"Hello, {name}!"
@@ -150,7 +173,11 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Greeting:
-    """Represent a generated greeting."""
+    """Represent a generated greeting.
+
+    Attributes:
+        text: Required. Greeting text.
+    """
 
     text: str
 EOF
@@ -168,7 +195,14 @@ import logging
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return module logger; configuration belongs to entrypoints."""
+    """Return module logger; configuration belongs to entrypoints.
+
+    Args:
+        name: Required. Logger name, usually ``__name__``.
+
+    Returns:
+        Logger instance with the requested name.
+    """
     return logging.getLogger(name)
 EOF
 cat > "$root/tests/config/test_settings.py" <<EOF

@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Edit, Bash
 
 ## Purpose
 
-Build maintainable, importable Python packages with classes as the default boundary for state, lifecycle, I/O, and domain behavior. Use pure functions for small stateless transforms when a class would add ceremony. Keep business logic testable and separate from entrypoints.
+Build maintainable, importable Python packages with a strict typed, class-first foundation. Classes are the default boundary for state, lifecycle, I/O, and domain behavior. Use pure functions only for small stateless transforms where a class would add ceremony. Keep business logic testable and separate from entrypoints.
 
 ## Workflows
 
@@ -75,7 +75,7 @@ The generated project must:
 
 - use `src/<import_name>/` layout, valid `pyproject.toml` with `requires-python = ">=3.12"`, and committed `uv.lock`;
 - import successfully from outside the repository root with `uv run`;
-- include one small class with a typed method and one passing test;
+- include strict type-checker config (`[tool.pyright] typeCheckingMode = "strict"`), one small class with a typed method, and passing mirrored tests;
 - include `Config` as `@dataclass(frozen=True)` when configuration is needed;
 - use explicit paths/config passed into constructors and methods;
 - include no network calls, secrets, fake production data, or destructive actions;
@@ -120,8 +120,8 @@ Run commands from any working directory when possible. Resolve project-root-rela
 
 ## Code Quality
 
-- Type-hint parameters, return values, and dataclass fields.
-- Document public classes, methods, and functions; private trivial helpers need only clear names/types.
+- Type-hint every parameter, return value, and dataclass field. Treat missing types as scaffold defects.
+- Document public classes, methods, and functions with parameters/attributes, returns, and raised exceptions where applicable. Private trivial helpers need clear names/types.
 - Keep imports at module scope unless a documented optional-dependency, cycle, or startup-cost reason requires local import.
 - Nested functions are allowed for closures/callbacks when they improve locality and testability.
 - Prefer small cohesive classes over one class per line of code.

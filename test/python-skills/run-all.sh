@@ -24,6 +24,8 @@ mkdir "$work/code" && cd "$work/code"
 "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo'
 test -f tiny-demo/pyproject.toml
 grep -q 'requires-python = ">=3.12"' tiny-demo/pyproject.toml
+grep -q '\[tool.pyright\]' tiny-demo/pyproject.toml
+grep -q 'typeCheckingMode = "strict"' tiny-demo/pyproject.toml
 test -f tiny-demo/uv.lock
 test -f tiny-demo/src/tiny_demo/core/__init__.py
 test -f tiny-demo/src/tiny_demo/config/__init__.py
@@ -34,6 +36,11 @@ test -f tiny-demo/tests/config/test_settings.py
 test -f tiny-demo/tests/schemas/test_contracts.py
 test -f tiny-demo/tests/utils/test_logging.py
 grep -q 'uv sync' tiny-demo/README.md
+grep -q 'Args:' tiny-demo/src/tiny_demo/core/service.py
+grep -q 'Returns:' tiny-demo/src/tiny_demo/core/service.py
+grep -q 'Raises:' tiny-demo/src/tiny_demo/core/service.py
+grep -q 'Attributes:' tiny-demo/src/tiny_demo/config/settings.py
+grep -q 'Attributes:' tiny-demo/src/tiny_demo/schemas/contracts.py
 (cd tiny-demo && uv sync --quiet && uv run pytest -q && uv run python -c 'from tiny_demo.core import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"')
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo' >/dev/null 2>&1
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" '42' >/dev/null 2>&1
