@@ -2,6 +2,7 @@
 .agents/
 .claude/
 .codex/
+.pi/
 skills-lock.json
 docs/
 
