@@ -10,6 +10,10 @@ for skill in python-code-dev python-notebook-dev; do
   grep -q "^name: $skill$" "$repo_root/skills/$skill/SKILL.md"
   grep -q '/python-' "$repo_root/skills/$skill/SKILL.md"
 done
+
+grep -q 'Flatten Nested Generated Projects' "$repo_root/skills/python-code-dev/SKILL.md"
+grep -q 'Do not touch `docs/` or `.fleet/`' "$repo_root/skills/python-code-dev/SKILL.md"
+grep -q 'rm -rf' "$repo_root/skills/python-code-dev/SKILL.md"
 ! test -e "$repo_root/skills/code-development"
 ! test -e "$repo_root/skills/notebook-development"
 
@@ -26,6 +30,16 @@ grep -q 'uv sync' tiny-demo/README.md
 (cd tiny-demo && uv sync --quiet && uv run pytest -q && uv run python -c 'from tiny_demo.core import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"')
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo' >/dev/null 2>&1
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" '42' >/dev/null 2>&1
+
+mkdir "$work/existing-root" && cd "$work/existing-root"
+git init -q
+touch README.md
+"$repo_root/skills/python-code-dev/scripts/new.sh" 'agentgames'
+test -f pyproject.toml
+test -f uv.lock
+test -f src/agentgames/core/__init__.py
+test ! -e agentgames/src/agentgames
+(cd /tmp && uv run --project "$work/existing-root" python -c 'from agentgames.core import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"')
 
 mkdir "$work/notebook" && cd "$work/notebook"
 "$repo_root/skills/python-notebook-dev/scripts/new.sh" 'Tiny Notebook'

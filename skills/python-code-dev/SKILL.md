@@ -20,7 +20,7 @@ Build maintainable, importable Python packages with classes as the default bound
 | `/python-code-dev migrate <notebook.py>` | Move notebook logic into the package and update notebook imports |
 | `/python-code-dev verify <path>` | Run package, import, test, and quality checks |
 
-For `new`, run `${AGENTS_SKILLS_DIR}/scripts/new.sh "<project-name>"` when available. It creates the project in the current directory and refuses to overwrite an existing directory. `adapt`, `migrate`, and `verify` are agent-run workflows: inspect the target, make reviewed edits, then run declared checks.
+For `new`, run `${AGENTS_SKILLS_DIR}/scripts/new.sh "<project-name>"` when available. If the current directory already looks like a project root (`.git`, `README.md`, `pyproject.toml`, `docs/`, or `.fleet/`), scaffold in place as `./src/<package>/` and `./tests/`. Otherwise create `<project-name>/src/<package>/`. Refuse overwrites. `adapt`, `migrate`, and `verify` are agent-run workflows: inspect the target, make reviewed edits, then run declared checks.
 
 ## Starter Layout
 
@@ -64,7 +64,7 @@ The generated project must:
 - include no network calls, secrets, fake production data, or destructive actions;
 - document setup and verification commands in `README.md`.
 
-Project names become directories and import names: lowercase, non-alphanumeric characters converted to hyphens for the directory and underscores for the import package. Reject empty or ambiguous names.
+Project names become directories and import names: lowercase, non-alphanumeric characters converted to hyphens for the wrapper directory and underscores for the import package. If the user wants package `agentgames`, they must pass `agentgames`; `agent games` becomes `agent_games`. Reject empty or ambiguous names.
 
 ## Architecture
 
@@ -128,6 +128,39 @@ Never delete the source notebook merely because duplicated implementation moved.
 ## Adapt Workflow
 
 `adapt` first records current behavior, then changes structure in small steps. Preserve public APIs unless requested otherwise. Add tests before risky refactors, review the diff, and avoid broad unrelated rewrites.
+
+## Flatten Nested Generated Projects
+
+If the repo root is already the intended project root, do not keep a generated `<project-name>/` wrapper containing its own `src/`, `tests/`, `pyproject.toml`, `uv.lock`, `.venv`, egg-info, or caches. Flatten it into the repo root.
+
+Required safety order:
+
+1. Inspect both root and nested project files before moving anything.
+2. Move nested package dirs to root: `mv <nested>/src ./src`, `mv <nested>/tests ./tests`, `mv <nested>/uv.lock ./uv.lock`.
+3. Use nested `pyproject.toml` as canonical root `./pyproject.toml` only after reading both files.
+4. Rewrite README setup/verify with `uv` while preserving the project title.
+5. Confirm `src/`, `tests/`, `uv.lock`, and root `pyproject.toml` contain the moved content.
+6. Only then remove nested project dir with `rm -rf <nested>`.
+7. Do not touch `docs/` or `.fleet/` unless explicitly requested.
+8. Verify with project-root and outside-root imports, then show `git diff`.
+
+Template commands:
+
+```bash
+mv <nested>/src src
+mv <nested>/tests tests
+mv <nested>/uv.lock uv.lock
+cp <nested>/pyproject.toml pyproject.toml
+# after confirming moved content exists:
+rm -rf <nested>
+uv sync
+uv run python -m compileall src tests
+uv run pytest
+cd /tmp && uv run --project /absolute/path/to/project python -c 'import package_name; print(package_name.__name__)'
+git diff
+```
+
+Do not run `rm -rf <nested>` before proving root `src/`, `tests/`, `uv.lock`, and `pyproject.toml` are correct.
 
 ## Verify Workflow
 

@@ -28,10 +28,26 @@ case "$import_name" in
     ;;
 esac
 
-root="$PWD/$dir_name"
-if [[ -e "$root" ]]; then
-  printf 'refusing to overwrite existing path: %s\n' "$root" >&2
-  exit 1
+looks_like_project_root=0
+for marker in .git pyproject.toml README.md docs .fleet; do
+  if [[ -e "$PWD/$marker" ]]; then
+    looks_like_project_root=1
+    break
+  fi
+done
+
+if [[ "$looks_like_project_root" -eq 1 ]]; then
+  root="$PWD"
+  if [[ -e "$root/src" || -e "$root/tests" ]]; then
+    printf 'refusing to scaffold in-place because src/ or tests/ already exists; use adapt/flatten workflow\n' >&2
+    exit 1
+  fi
+else
+  root="$PWD/$dir_name"
+  if [[ -e "$root" ]]; then
+    printf 'refusing to overwrite existing path: %s\n' "$root" >&2
+    exit 1
+  fi
 fi
 
 package="$root/src/$import_name"
