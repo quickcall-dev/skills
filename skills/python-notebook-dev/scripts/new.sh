@@ -53,7 +53,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class Config:
-    """Configuration for this experiment."""
+    """Configuration for this experiment.
+
+    Attributes:
+        output_dir: Directory where deterministic artifacts are written.
+    """
 
     output_dir: Path = PROJECT_ROOT / "outputs/$(date +%F)/$id-$slug"
 
@@ -66,13 +70,31 @@ CONFIG = Config()
 
 # %%
 class Experiment:
-    """Run experiment logic with explicit configuration."""
+    """Run experiment logic with explicit configuration.
+
+    Attributes:
+        config: Immutable experiment configuration.
+    """
 
     def __init__(self, config: Config) -> None:
+        """Initialize experiment.
+
+        Args:
+            config: Immutable experiment configuration.
+        """
         self.config = config
 
     def run(self) -> dict[str, str]:
-        """Create and return a minimal result."""
+        """Create and return a minimal result.
+
+        Returns:
+            Result dictionary with a status field.
+
+        Raises:
+            RuntimeError: If experiment configuration is invalid.
+        """
+        if not self.config.output_dir:
+            raise RuntimeError("output_dir must be configured")
         result = {"status": "ready"}
         logger.info("Output keys=%s", list(result))
         return result

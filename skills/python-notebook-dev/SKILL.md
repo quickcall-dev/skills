@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Edit, Bash
 
 ## Purpose
 
-Create reproducible `# %%` Python notebooks for focused experiments. Use classes by default for stateful steps, I/O, pipelines, and lifecycle; use pure functions for small stateless transforms. Keep notebooks executable from a clean kernel and ready to migrate into `python-code-dev`.
+Create reproducible `# %%` Python notebooks for focused experiments. Class-first is mandatory for stateful steps, I/O, pipelines, experiment execution, and lifecycle; pure functions are only for tiny stateless transforms. Loose notebooks are forbidden. Keep notebooks executable from a clean kernel and ready to migrate into `python-code-dev`.
 
 ## Workflows
 
@@ -20,9 +20,11 @@ Create reproducible `# %%` Python notebooks for focused experiments. Use classes
 | `/python-notebook-dev migrate <notebook.py>` | Move reusable logic into `python-code-dev` |
 | `/python-notebook-dev verify <notebook.py>` | Execute and inspect reproducibility/validation |
 
-For `new`, run `${AGENTS_SKILLS_DIR}/scripts/new.sh "<notebook-name>"` when available. It creates a notebook under the current project and refuses unsafe overwrites.
+For `new`, this is a script-only workflow: run `${AGENTS_SKILLS_DIR}/scripts/new.sh "<notebook-name>"` when available. Do not hand-create notebook files for `new`. It creates a notebook under the current project and refuses unsafe overwrites.
 
 ## Deterministic Naming
+
+Every notebook path MUST match `notebooks/NNN-slug/snake_stem.py`. Do not create or keep loose notebooks such as `notebooks/foo.py`, `foo.py`, or `analysis.ipynb` unless the human explicitly requests an archive/import operation. Adapt loose files by moving them into the required numbered folder before changing content.
 
 New notebooks use `notebooks/NNN-slug/notebook_name.py`:
 
@@ -85,18 +87,34 @@ np.random.seed(CONFIG.seed)
 
 Each code cell has one responsibility, explicit inputs/outputs, safe logging, and a local check. Sequential notebooks may consume named outputs from earlier cells, but every dependency must be visible and the full notebook must run top-to-bottom in a fresh kernel.
 
-Prefer this class-first shape:
+Use this class-first shape. Any cell that owns config, I/O, state, model/client setup, pipeline steps, or execution MUST live behind a typed class:
 
 ```python
 # %%
 class SummaryBuilder:
-    """Build a summary from input values."""
+    """Build a summary from input values.
+
+    Attributes:
+        values: Input numeric values summarized by this builder.
+    """
 
     def __init__(self, values: list[float]) -> None:
+        """Initialize builder.
+
+        Args:
+            values: Input numeric values.
+        """
         self.values = values
 
     def build(self) -> dict[str, float]:
-        """Return count and mean for configured values."""
+        """Return count and mean for configured values.
+
+        Returns:
+            Summary containing count and mean.
+
+        Raises:
+            ValueError: If values are empty.
+        """
         if not self.values:
             raise ValueError("values must not be empty")
         summary = {"count": len(self.values), "mean": sum(self.values) / len(self.values)}
@@ -111,7 +129,7 @@ assert summary["count"] == 3  # internal/test invariant only
 Rules:
 
 - Type-hint parameters and return values.
-- Document public classes/methods; keep trivial private helpers concise.
+- Document public classes/methods with `Args:`, `Returns:`, `Raises:`, and `Attributes:` where applicable; keep trivial private helpers concise.
 - Optional at call site requires a default (`value: int | None = None`).
 - Use explicit exceptions for external/input validation; reserve `assert` for internal invariants and tests.
 - Log counts, shapes, schemas, and safe paths—not secrets, tokens, raw PII, or full records.
@@ -152,7 +170,7 @@ Exact cell count is not mandatory; checks must match notebook outputs.
 
 ## Adapt Workflow
 
-`adapt` audits first, preserves behavior, then changes structure in small steps:
+`adapt` audits first, preserves behavior, then changes structure in small steps. Do not create or keep loose notebook paths during adapt; final path must match `notebooks/NNN-slug/snake_stem.py`.
 
 1. Inspect cell order, hidden state, magics, side effects, inputs, and outputs.
 2. Move imports/config/seeds to the first cell; add section markdown.

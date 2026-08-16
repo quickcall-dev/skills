@@ -11,6 +11,12 @@ for skill in python-code-dev python-notebook-dev; do
   grep -q '/python-' "$repo_root/skills/$skill/SKILL.md"
 done
 
+grep -q 'Loose notebooks are forbidden' "$repo_root/skills/python-notebook-dev/SKILL.md"
+grep -q 'Every notebook path MUST match' "$repo_root/skills/python-notebook-dev/SKILL.md"
+grep -q 'Class-first is mandatory' "$repo_root/skills/python-notebook-dev/SKILL.md"
+grep -q 'Do not create or keep loose' "$repo_root/skills/python-notebook-dev/SKILL.md"
+grep -q 'new.*script-only workflow' "$repo_root/skills/python-notebook-dev/SKILL.md"
+
 grep -q 'Flatten Nested Generated Projects' "$repo_root/skills/python-code-dev/SKILL.md"
 grep -q 'Do not touch `docs/` or `.fleet/`' "$repo_root/skills/python-code-dev/SKILL.md"
 grep -q 'rm -rf' "$repo_root/skills/python-code-dev/SKILL.md"
@@ -82,6 +88,12 @@ mkdir "$work/notebook" && cd "$work/notebook"
 "$repo_root/skills/python-notebook-dev/scripts/new.sh" 'Second Notebook'
 test -f notebooks/001-tiny-notebook/tiny_notebook.py
 test -f notebooks/002-second-notebook/second_notebook.py
+test ! -f notebooks/tiny_notebook.py
+grep -q 'class Experiment' notebooks/001-tiny-notebook/tiny_notebook.py
+grep -q 'Attributes:' notebooks/001-tiny-notebook/tiny_notebook.py
+grep -q 'Args:' notebooks/001-tiny-notebook/tiny_notebook.py
+grep -q 'Returns:' notebooks/001-tiny-notebook/tiny_notebook.py
+grep -q 'Raises:' notebooks/001-tiny-notebook/tiny_notebook.py
 (cd /tmp && python3 "$work/notebook/notebooks/001-tiny-notebook/tiny_notebook.py" >/dev/null)
 (cd /tmp && python3 "$work/notebook/notebooks/002-second-notebook/second_notebook.py" >/dev/null)
 test -n "$(find "$work/notebook/outputs" -name result.txt -print -quit)"
