@@ -23,6 +23,9 @@ grep -q 'Do not invent domain classes' "$repo_root/skills/python-code-dev/SKILL.
 mkdir "$work/code" && cd "$work/code"
 "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo'
 test -f tiny-demo/pyproject.toml
+test -f tiny-demo/.env.example
+grep -q '^.env$' tiny-demo/.gitignore
+grep -q 'TINY_DEMO_OUTPUT_ROOT' tiny-demo/.env.example
 grep -q 'requires-python = ">=3.12"' tiny-demo/pyproject.toml
 grep -q '\[tool.pyright\]' tiny-demo/pyproject.toml
 grep -q 'typeCheckingMode = "strict"' tiny-demo/pyproject.toml
@@ -34,6 +37,7 @@ test -f tiny-demo/src/tiny_demo/utils/atomic.py
 test -f tiny-demo/src/tiny_demo/utils/ids.py
 test -f tiny-demo/src/tiny_demo/utils/logging.py
 test -f tiny-demo/src/tiny_demo/configs/env.py
+grep -q 'load_env' tiny-demo/src/tiny_demo/configs/env.py
 test -f tiny-demo/src/tiny_demo/configs/paths.py
 test -f tiny-demo/src/tiny_demo/core/context.py
 test -f tiny-demo/src/tiny_demo/core/runner.py
@@ -43,6 +47,7 @@ test -f tiny-demo/tests/schemas/test_contracts.py
 test -f tiny-demo/tests/utils/test_logging.py
 test -f tiny-demo/tests/utils/test_atomic.py
 test -f tiny-demo/tests/utils/test_ids.py
+test -f tiny-demo/tests/configs/test_env.py
 test -f tiny-demo/tests/configs/test_paths.py
 test -f tiny-demo/tests/runner/test_cli.py
 grep -q 'uv sync' tiny-demo/README.md
@@ -60,6 +65,9 @@ git init -q
 touch README.md
 "$repo_root/skills/python-code-dev/scripts/new.sh" 'agentgames'
 test -f pyproject.toml
+test -f .env.example
+grep -q '^.env$' .gitignore
+grep -q 'AGENTGAMES_OUTPUT_ROOT' .env.example
 grep -q 'requires-python = ">=3.12"' pyproject.toml
 test -f uv.lock
 test -f src/agentgames/core/__init__.py

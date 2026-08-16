@@ -89,6 +89,7 @@ cat > "$root/README.md" <<EOF
 ## Setup
 
     uv sync
+    cp .env.example .env
 
 ## Verify
 
@@ -98,6 +99,23 @@ cat > "$root/README.md" <<EOF
 
     uv run python -m $import_name.runner.cli --message hello
 EOF
+cat > "$root/.env.example" <<EOF
+# Optional project-local overrides. Copy to .env before editing.
+${package_upper}_OUTPUT_ROOT=outputs
+${package_upper}_LOGS_ROOT=logs
+EOF
+if [[ ! -f "$root/.gitignore" ]]; then
+  touch "$root/.gitignore"
+fi
+if ! grep -qxF '.env' "$root/.gitignore"; then
+  printf '.env\n' >> "$root/.gitignore"
+fi
+if ! grep -qxF '.venv/' "$root/.gitignore"; then
+  printf '.venv/\n' >> "$root/.gitignore"
+fi
+if ! grep -qxF '*.egg-info/' "$root/.gitignore"; then
+  printf '*.egg-info/\n' >> "$root/.gitignore"
+fi
 
 mkdir -p "$root/src" "$root/tests"
 cp -R "$template_dir/src/__package__" "$root/src/$import_name"

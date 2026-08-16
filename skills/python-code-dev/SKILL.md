@@ -41,11 +41,13 @@ project-name/
 ├── pyproject.toml
 ├── uv.lock
 ├── README.md
+├── .env.example
+├── .gitignore
 ├── src/project_name/
 │   ├── __init__.py
 │   ├── configs/
 │   │   ├── __init__.py
-│   │   ├── env.py          # environment access helpers
+│   │   ├── env.py          # stdlib .env + environment access helpers
 │   │   └── paths.py        # repo/output/log path helpers
 │   ├── core/
 │   │   ├── __init__.py
@@ -88,7 +90,7 @@ The generated project must:
 
 - use `src/<import_name>/` layout, valid `pyproject.toml` with `requires-python = ">=3.12"`, and committed `uv.lock`;
 - import successfully from outside the repository root with `uv run`;
-- include strict type-checker config (`[tool.pyright] typeCheckingMode = "strict"`), one small class with a typed method, reusable logger/config/path/atomic/run helpers, an e2e CLI runner, and passing mirrored tests;
+- include strict type-checker config (`[tool.pyright] typeCheckingMode = "strict"`), `.env.example` plus `.env` gitignore, one small class with a typed method, reusable logger/config/path/atomic/run helpers, an e2e CLI runner, and passing mirrored tests;
 - include `Config` as `@dataclass(frozen=True)` when configuration is needed;
 - use explicit paths/config passed into constructors and methods;
 - include no network calls, secrets, fake production data, or destructive actions;
