@@ -50,6 +50,7 @@ grep -q 'Args:' tiny-demo/src/tiny_demo/core/service.py
 grep -q 'Returns:' tiny-demo/src/tiny_demo/core/service.py
 grep -q 'Raises:' tiny-demo/src/tiny_demo/core/service.py
 grep -q 'Attributes:' tiny-demo/src/tiny_demo/schemas/contracts.py
+! grep -R '__PACKAGE__\|__package__\|__PROJECT__' tiny-demo/src tiny-demo/tests tiny-demo/README.md tiny-demo/pyproject.toml
 (cd tiny-demo && uv sync --quiet && uv run pytest -q && uv run python -c 'from tiny_demo.core import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"' && uv run python -m tiny_demo.runner.cli --message hello)
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo' >/dev/null 2>&1
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" '42' >/dev/null 2>&1

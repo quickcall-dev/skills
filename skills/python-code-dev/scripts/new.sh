@@ -115,6 +115,7 @@ for path in list((root / "src" / package).rglob("*.py")) + list((root / "tests")
     text = path.read_text(encoding="utf-8")
     text = text.replace("__PACKAGE_UPPER__", package_upper)
     text = text.replace("__PACKAGE__", package)
+    text = text.replace("__package__", package)
     text = text.replace("__PROJECT__", project)
     path.write_text(text, encoding="utf-8")
 PY
