@@ -51,7 +51,15 @@ else
 fi
 
 package="$root/src/$import_name"
-mkdir -p "$package/config" "$package/core" "$package/schemas" "$package/utils" "$root/tests"
+mkdir -p \
+  "$package/config" \
+  "$package/core" \
+  "$package/schemas" \
+  "$package/utils" \
+  "$root/tests/config" \
+  "$root/tests/core" \
+  "$root/tests/schemas" \
+  "$root/tests/utils"
 cat > "$root/pyproject.toml" <<EOF
 [project]
 name = "$dir_name"
@@ -163,12 +171,44 @@ def get_logger(name: str) -> logging.Logger:
     """Return module logger; configuration belongs to entrypoints."""
     return logging.getLogger(name)
 EOF
-cat > "$root/tests/test_core.py" <<EOF
+cat > "$root/tests/config/test_settings.py" <<EOF
+from $import_name.config import Config
+
+
+def test_config_defaults() -> None:
+    assert Config().name == "default"
+EOF
+cat > "$root/tests/core/test_service.py" <<EOF
+import pytest
+
 from $import_name.core import ExampleService
 
 
 def test_greet() -> None:
     assert ExampleService().greet("Kimi") == "Hello, Kimi!"
+
+
+def test_greet_rejects_blank_name() -> None:
+    with pytest.raises(ValueError, match="name must not be empty"):
+        ExampleService().greet(" ")
+EOF
+cat > "$root/tests/schemas/test_contracts.py" <<EOF
+from $import_name.schemas import Greeting
+
+
+def test_greeting_contract() -> None:
+    assert Greeting(text="Hello").text == "Hello"
+EOF
+cat > "$root/tests/utils/test_logging.py" <<EOF
+import logging
+
+from $import_name.utils import get_logger
+
+
+def test_get_logger_returns_named_logger() -> None:
+    logger = get_logger("test.logger")
+    assert isinstance(logger, logging.Logger)
+    assert logger.name == "test.logger"
 EOF
 cat > "$root/tests/test_smoke.py" <<EOF
 

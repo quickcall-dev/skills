@@ -29,7 +29,10 @@ test -f tiny-demo/src/tiny_demo/core/__init__.py
 test -f tiny-demo/src/tiny_demo/config/__init__.py
 test -f tiny-demo/src/tiny_demo/schemas/__init__.py
 test -f tiny-demo/src/tiny_demo/utils/__init__.py
-test -f tiny-demo/tests/test_core.py
+test -f tiny-demo/tests/core/test_service.py
+test -f tiny-demo/tests/config/test_settings.py
+test -f tiny-demo/tests/schemas/test_contracts.py
+test -f tiny-demo/tests/utils/test_logging.py
 grep -q 'uv sync' tiny-demo/README.md
 (cd tiny-demo && uv sync --quiet && uv run pytest -q && uv run python -c 'from tiny_demo.core import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"')
 ! "$repo_root/skills/python-code-dev/scripts/new.sh" 'Tiny Demo' >/dev/null 2>&1
@@ -43,6 +46,10 @@ test -f pyproject.toml
 grep -q 'requires-python = ">=3.12"' pyproject.toml
 test -f uv.lock
 test -f src/agentgames/core/__init__.py
+test -f tests/core/test_service.py
+test -f tests/config/test_settings.py
+test -f tests/schemas/test_contracts.py
+test -f tests/utils/test_logging.py
 test ! -e agentgames/src/agentgames
 (cd /tmp && uv run --project "$work/existing-root" python -c 'from agentgames.core import ExampleService; assert ExampleService().greet("Kimi") == "Hello, Kimi!"')
 

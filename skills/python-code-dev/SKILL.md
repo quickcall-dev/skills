@@ -56,11 +56,18 @@ project-name/
 │       ├── __init__.py
 │       └── logging.py      # small cross-cutting helpers only
 └── tests/
-    ├── test_core.py
+    ├── config/
+    │   └── test_settings.py
+    ├── core/
+    │   └── test_service.py
+    ├── schemas/
+    │   └── test_contracts.py
+    ├── utils/
+    │   └── test_logging.py
     └── test_smoke.py
 ```
 
-Keep domain modules under `src/project_name/`, never under a package literally named `src`. Add `data`, `features`, `models`, or `evaluate` only when the project needs them. Re-export only intentional public APIs; avoid eager imports that cause cycles or optional-dependency failures.
+Keep domain modules under `src/project_name/`, never under a package literally named `src`. Keep tests outside `src/` under `tests/`, mirrored by source package (`tests/core/test_service.py` for `src/project_name/core/service.py`). Add `data`, `features`, `models`, or `evaluate` only when the project needs them. Re-export only intentional public APIs; avoid eager imports that cause cycles or optional-dependency failures.
 
 ## New Project Contract
 
