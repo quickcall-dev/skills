@@ -1,0 +1,60 @@
+{
+  "policy": {
+    "default": "open-source-only",
+    "theme_model": "Tailwind classes, shadcn CSS variables, source-owned React components",
+    "avoid_by_default": ["premium catalogs", "opaque binaries", "closed theming systems", "multiple visual systems"]
+  },
+  "providers": [
+    {
+      "name": "shadcn/ui official blocks",
+      "url": "https://ui.shadcn.com/blocks",
+      "license_note": "Open source official shadcn blocks",
+      "best_for": ["sidebar", "dashboard", "auth", "cards", "app-shell"],
+      "install_model": "npx shadcn@latest add <block-name>",
+      "customization": "Source-owned files, Tailwind classes, shadcn CSS variables"
+    },
+    {
+      "name": "Manifest UI",
+      "url": "https://ui.manifest.build/",
+      "license_note": "Open source shadcn registry for chat and agent app UIs",
+      "best_for": ["chat", "agentic-ui", "message-bubbles", "conversation"],
+      "install_model": "npx shadcn@latest add @manifest/<item>",
+      "customization": "Source-owned shadcn/Tailwind components"
+    },
+    {
+      "name": "blocks.so",
+      "url": "https://blocks.so/",
+      "license_note": "Open source shadcn/Tailwind blocks",
+      "best_for": ["sidebar", "auth", "onboarding", "dialogs", "stats", "tables", "ai-chat"],
+      "install_model": "npx shadcn@latest add @blocks-so/<item>",
+      "customization": "Source-owned React/Tailwind components"
+    },
+    {
+      "name": "Origin UI",
+      "url": "https://originui.com/",
+      "license_note": "MIT licensed Tailwind/React components following shadcn conventions",
+      "best_for": ["app-ui", "inputs", "cards", "forms", "polished-details"],
+      "install_model": "copy source or shadcn remote URL when available",
+      "customization": "Tailwind v4, CSS variables, source-owned components"
+    },
+    {
+      "name": "Kibo UI",
+      "url": "https://www.kibo-ui.com/",
+      "license_note": "Verify exact license before installing in client work",
+      "best_for": ["kanban", "advanced-components", "productivity-ui"],
+      "install_model": "shadcn-compatible registry items where available",
+      "customization": "shadcn-compatible source components"
+    }
+  ],
+  "surfaces": {
+    "sidebar": ["shadcn/ui official blocks", "blocks.so", "private registry"],
+    "navbar": ["shadcn/ui official primitives", "Origin UI", "private registry"],
+    "chat": ["Manifest UI", "blocks.so", "private registry"],
+    "dashboard": ["shadcn/ui official blocks", "blocks.so", "private registry"],
+    "settings": ["shadcn/ui primitives", "Origin UI", "private registry"],
+    "auth": ["shadcn/ui official blocks", "blocks.so", "private registry"],
+    "clerk-auth": ["shadcn/ui official blocks", "blocks.so", "private registry"],
+    "onboarding": ["blocks.so", "shadcn/ui primitives", "private registry"],
+    "map": ["MapLibre GL JS", "shadcn/ui panels", "private registry"]
+  }
+}

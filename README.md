@@ -4,7 +4,7 @@
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-compatible-green?style=flat-square)](https://agentskills.io)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square)](LICENSE)
 
-Agent Skills for documentation management, Markdown export, and Python development workflows.
+Agent Skills for documentation management, Markdown export, Python development workflows, and frontend product UI foundations.
 
 Works with **Claude Code**, **Cursor**, **GitHub Copilot**, **Gemini CLI**, **OpenAI Codex**, **Goose**, **Roo Code**, **JetBrains Junie**, and [25+ other agents](https://agentskills.io).
 
@@ -69,6 +69,23 @@ npx skills add quickcall-dev/skills --skill markdown-to-pdf
 
 </details>
 
+### Frontend Development
+
+<details>
+<summary><b>product-ui-kit</b> — React product UI foundation</summary>
+
+Ground React frontend repos with Tailwind, shadcn/ui, OSS block sourcing, reusable app surfaces, optional MapLibre maps, and product-grade mockup patterns.
+
+**Use when:** starting, scaffolding, or grounding React frontend repos; building durable product UI foundations; planning common app surfaces.
+
+**Commands:** `audit`, `scaffold`, `plan-surface`, `init-house-registry`
+
+```bash
+npx skills add quickcall-dev/skills --skill product-ui-kit
+```
+
+</details>
+
 ### Python Development
 
 <details>
@@ -113,6 +130,7 @@ skills/
 │   ├── scripts/
 │   └── references/
 ├── markdown-to-pdf/        # Markdown PDF export
+├── product-ui-kit/         # React product UI foundation
 ├── python-code-dev/        # Class-first Python packages
 └── python-notebook-dev/    # Reproducible numbered notebooks
 
@@ -126,6 +144,7 @@ Tests live in `test/` and are not part of the skills themselves. They validate s
 ```bash
 # Run active skill tests (from repo root)
 bash test/doc/run-all.sh skills/doc
+bash test/product-ui-kit/run-all.sh
 bash test/python-skills/run-all.sh
 ```
 
