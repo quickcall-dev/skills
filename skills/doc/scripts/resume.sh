@@ -37,14 +37,26 @@ if [[ -n "$latest_plan" ]]; then
   echo "</file-content>"
 fi
 
-# Latest checkpoint
-latest_ckpt=$(find "$EXPT_PATH/checkpoints" -name "*.md" -type f 2>/dev/null | sort | tail -1)
-if [[ -n "$latest_ckpt" ]]; then
+# Recent checkpoints (last 5) for continuity
+recent_ckpts=$(find "$EXPT_PATH/checkpoints" -name "*.md" -type f 2>/dev/null | sort | tail -5)
+if [[ -n "$recent_ckpts" ]]; then
   echo ""
-  echo "--- Latest checkpoint: $(basename "$latest_ckpt") ---"
-  echo "<file-content source=\"$(basename "$latest_ckpt")\">"
-  cat "$latest_ckpt"
-  echo "</file-content>"
+  echo "--- Recent checkpoints (last 5): ---"
+  latest_ckpt=$(printf '%s\n' "$recent_ckpts" | tail -1)
+  printf '%s\n' "$recent_ckpts" | while IFS= read -r ckpt; do
+    if [[ -z "$ckpt" ]]; then
+      continue
+    fi
+    echo ""
+    if [[ "$ckpt" == "$latest_ckpt" ]]; then
+      echo "--- Latest checkpoint: $(basename "$ckpt") ---"
+    else
+      echo "--- Checkpoint: $(basename "$ckpt") ---"
+    fi
+    echo "<file-content source=\"$(basename "$ckpt")\">"
+    cat "$ckpt"
+    echo "</file-content>"
+  done
 fi
 
 # List findings

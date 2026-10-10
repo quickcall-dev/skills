@@ -701,6 +701,79 @@ json.dump(m, open('$root/docs/experiments/001-findings-test/.meta.json', 'w'), i
 }
 
 # ---------------------------------------------------------------------------
+# D21: resume.sh includes last 5 checkpoints for continuity
+# ---------------------------------------------------------------------------
+run_D21() {
+  local root; root=$(mkroot D21)
+  cd "$root"
+  bash "${SCRIPTS}/start.sh" "checkpoint-history" >/dev/null 2>&1
+
+  for i in one two three four five six; do
+    bash "${SCRIPTS}/ckpt.sh" 1 "checkpoint $i" >/dev/null 2>&1
+    local file
+    file=$(find "$root/docs/experiments/001-checkpoint-history/checkpoints" -name "*checkpoint-$i.md" -type f | head -1)
+    echo "handoff marker $i" >> "$file"
+  done
+
+  local out
+  out=$(bash "${SCRIPTS}/resume.sh" 1 2>&1)
+
+  local ok=1
+  echo "$out" | grep -q "Recent checkpoints (last 5):" || ok=0
+  echo "$out" | grep -q "handoff marker two" || ok=0
+  echo "$out" | grep -q "handoff marker three" || ok=0
+  echo "$out" | grep -q "handoff marker four" || ok=0
+  echo "$out" | grep -q "handoff marker five" || ok=0
+  echo "$out" | grep -q "handoff marker six" || ok=0
+  echo "$out" | grep -q "handoff marker one" && ok=0
+
+  if [[ $ok -eq 1 ]]; then
+    record "D21 resume-reads-last-five-checkpoints" PASS
+  else
+    record "D21 resume-reads-last-five-checkpoints" FAIL
+  fi
+
+  cd /tmp
+  cleanup_root "$root"
+}
+
+# ---------------------------------------------------------------------------
+# D22: SKILL.md tells agents to edit recent active docs when updating
+# ---------------------------------------------------------------------------
+run_D22() {
+  local skill="$SKILL_DIR/SKILL.md"
+  local ok=1
+  grep -q "Update the same recent file" "$skill" || ok=0
+  grep -q "create a new numbered file" "$skill" || ok=0
+  grep -q "Recent active doc" "$skill" || ok=0
+
+  if [[ $ok -eq 1 ]]; then
+    record "D22 skill-guides-update-vs-new" PASS
+  else
+    record "D22 skill-guides-update-vs-new" FAIL
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# D23: SKILL.md checkpoint template requires complete handoff + priority
+# ---------------------------------------------------------------------------
+run_D23() {
+  local skill="$SKILL_DIR/SKILL.md"
+  local ok=1
+  grep -q "Complete Agent Handoff" "$skill" || ok=0
+  grep -q "Mermaid diagram" "$skill" || ok=0
+  grep -q "Inferred Priority" "$skill" || ok=0
+  grep -q "Last 5 checkpoints" "$skill" || ok=0
+  grep -q "enough detail that a fresh agent can continue without reading chat history" "$skill" || ok=0
+
+  if [[ $ok -eq 1 ]]; then
+    record "D23 checkpoint-complete-handoff-guidance" PASS
+  else
+    record "D23 checkpoint-complete-handoff-guidance" FAIL
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Run all
 # ---------------------------------------------------------------------------
 run_D1
@@ -723,6 +796,9 @@ run_D17
 run_D18
 run_D19
 run_D20
+run_D21
+run_D22
+run_D23
 
 echo ""
 echo "============================================================"
