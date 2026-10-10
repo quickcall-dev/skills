@@ -211,5 +211,5 @@ src/lib/map-state.ts
 }
 
 console.log("");
-console.log("Frontend grounding complete.");
+console.log("Frontend guidance complete.");
 console.log("Next: install only the dependencies this repo actually needs.");

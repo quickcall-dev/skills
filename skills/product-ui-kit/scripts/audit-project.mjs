@@ -39,7 +39,7 @@ const checks = [
   ["Zod", Boolean(deps.zod)],
   ["TanStack Table", Boolean(deps["@tanstack/react-table"])],
   ["Playwright", Boolean(deps["@playwright/test"] || deps.playwright)],
-  [".agents/frontend grounding", hasAgentFrontend],
+  [".agents/frontend guidance", hasAgentFrontend],
   ["Next app directory", hasAppDir],
   ["src directory", hasSrcDir],
 ];
@@ -57,7 +57,7 @@ if (!deps["lucide-react"]) {
   console.log("- Add lucide-react for consistent app icons.");
 }
 if (!hasAgentFrontend) {
-  console.log("- Run scaffold.mjs to create .agents/frontend grounding docs.");
+  console.log("- Run scaffold.mjs to create .agents/frontend guidance docs.");
 }
 if (deps["maplibre-gl"]) {
   console.log("- Map app detected: keep map renderer separate from shadcn panels/controls.");

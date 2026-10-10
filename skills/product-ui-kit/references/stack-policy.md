@@ -6,7 +6,7 @@ Use this base for most new production-shaped React frontends:
 
 | Layer | Default | Why |
 |---|---|---|
-| Framework | Next.js for products, Vite for simple mockups/SPAs | Durable app structure or lightweight speed |
+| Framework | Next.js for products, Vite for simple mockups/SPAs | Durable app structure or fast small-app setup |
 | Language | TypeScript | Typed API envelopes, component contracts, map actions |
 | Styling | Tailwind CSS | Fast iteration, shadcn compatibility, agent-readable styling |
 | UI | shadcn/ui | Copy-in components, low bundle risk, easy customization |

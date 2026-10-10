@@ -74,9 +74,9 @@ npx skills add quickcall-dev/skills --skill markdown-to-pdf
 <details>
 <summary><b>product-ui-kit</b> — React product UI foundation</summary>
 
-Ground React frontend repos with Tailwind, shadcn/ui, OSS block sourcing, reusable app surfaces, optional MapLibre maps, and product-grade mockup patterns.
+Set up React frontend repos with Tailwind, shadcn/ui, OSS block sourcing, reusable app surfaces, optional MapLibre maps, and product-grade mockup patterns.
 
-**Use when:** starting, scaffolding, or grounding React frontend repos; building durable product UI foundations; planning common app surfaces.
+**Use when:** starting, scaffolding, or setting up React frontend repos; building durable product UI foundations; planning common app surfaces.
 
 **Commands:** `audit`, `scaffold`, `plan-surface`, `init-house-registry`
 

@@ -58,6 +58,7 @@ fi
 check_no_grep '\.agents/skills/product-ui-kit' "$skill_dir"
 check_no_grep 'Codex|codex|OpenAI|openai' "$skill_dir"
 check_no_grep 'shadcn MCP/skill' "$skill_dir"
+check_no_grep '\bground(ing|ed)?\b|\blightweight\b|\blite\b' "$skill_dir/SKILL.md"
 
 if [[ -f "$skill_dir/references/oss-provider-catalog.json" ]]; then
   node -e "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'))" "$skill_dir/references/oss-provider-catalog.json"
@@ -70,6 +71,10 @@ if [[ -f "$skill_dir/scripts/scaffold.mjs" ]]; then
   check_file "$tmp/.agents/frontend/STACK.md"
   check_file "$tmp/.agents/frontend/MAP_GUIDE.md"
   rm -rf "$tmp"
+fi
+
+if [[ -f README.md ]]; then
+  check_no_grep 'ground(ing|ed)? React frontend|ground React frontend|lightweight mockup' README.md
 fi
 
 if [[ "$failures" -gt 0 ]]; then
