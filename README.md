@@ -86,6 +86,23 @@ npx skills add quickcall-dev/skills --skill product-ui-kit
 
 </details>
 
+### Technical Manuals
+
+<details>
+<summary><b>technical-manual</b> — Markdown → engineering-manual PDF</summary>
+
+Turn Markdown notes, specs, design docs, READMEs, or agent-written reports into a beautifully typeset, print-ready technical manual PDF: styled parts/chapters, 17 figure primitives, tables, Mermaid, clickable contents, PDF bookmarks, page-numbered cross-references, and layout QA.
+
+**Use when:** making a Markdown doc easier to read or consume, "make this doc beautiful", turning notes into a manual/handbook/explainer, or rendering .md as a polished PDF.
+
+**Commands:** `setup`, `analyze`, `build`, `check`
+
+```bash
+npx skills add quickcall-dev/skills --skill technical-manual
+```
+
+</details>
+
 ### Python Development
 
 <details>
@@ -131,6 +148,7 @@ skills/
 │   └── references/
 ├── markdown-to-pdf/        # Markdown PDF export
 ├── product-ui-kit/         # React product UI foundation
+├── technical-manual/       # Markdown → engineering-manual PDF
 ├── python-code-dev/        # Class-first Python packages
 └── python-notebook-dev/    # Reproducible numbered notebooks
 
@@ -145,6 +163,7 @@ Tests live in `test/` and are not part of the skills themselves. They validate s
 # Run active skill tests (from repo root)
 bash test/doc/run-all.sh skills/doc
 bash test/product-ui-kit/run-all.sh
+bash test/technical-manual/run-all.sh
 bash test/python-skills/run-all.sh
 ```
 

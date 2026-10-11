@@ -1,0 +1,47 @@
+/* ==========================================================================
+   SIGNATURE: the house quirks.
+   The theme is the grammar; this file is the accent. Every rule here is a
+   deliberate, repeated habit — small enough to read past, consistent enough
+   to recognise. Turn the whole layer off with `quirks: false`.
+   Voice: an engineer who reads like an editor.
+   ========================================================================== */
+
+/* 1. Numbers in sentences sit like lowercase letters (old-style figures);
+      numbers that are data stay upright and tabular. */
+.chapter > p, .chapter li, .front > p, .front li, .dek, .fig-cap, .callout-body, .src-body,
+blockquote.pull, .part-dek, .cover .description, .colophon p {
+  font-variant-numeric: oldstyle-nums proportional-nums; }
+.tm-table, .ch-num, .po-num, .tp-num, .toc-row, .part-row, .stat-value, .bar-val, .kv, .xp,
+.fig-num, .bm-num, .ix-refs, .tl-when, .stack-off, .stack-size, code, h2, h3 {
+  font-variant-numeric: lining-nums tabular-nums; }
+
+/* 2. Every chapter opens with its first line in small caps. */
+p.opening::first-line { font-variant-caps: all-small-caps; letter-spacing: 0.04em; font-weight: 600; color: var(--ink); }
+
+/* 3. End mark: a small square in the part's colour closes every chapter. */
+.endmark { display: inline-block; width: 0.4em; height: 0.4em; background: var(--accent); margin-left: 0.5em; vertical-align: 0.04em; }
+
+/* 4. Folios count down the book: "13 / 20". */
+@page { @bottom-right { content: counter(page) " / " counter(pages); } }
+
+/* 5. Cross-references point instead of parenthesising: "Pack anatomy → 16". */
+.xref .xp::after { content: "→\00a0" target-counter(attr(data-ref), page); color: var(--accent); font-size: 0.82em; margin-left: 0.3em; }
+
+/* 6. Thumb tabs carry the part's name, read bottom to top. */
+.thumb span { height: calc(var(--step, 0.95in) - 0.14in); top: calc(var(--k) * var(--step, 0.95in) + 0.3in);
+  flex-direction: column; justify-content: flex-start; padding: 6pt 0; gap: 6pt; box-sizing: border-box; }
+.thumb i { display: block; writing-mode: vertical-rl; transform: rotate(180deg); font: 600 7.4pt var(--sans); font-style: normal;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: calc(var(--step, 0.95in) - 0.55in); }
+
+/* 7. Interpunct numbering (2·3, Figure 3·4) is applied by build.py; this keeps it optically centred. */
+.ch-num, .toc-row .n, .part-row .n, .fig-num { font-feature-settings: "case" 1; }
+
+/* 8. The colophon: the last page says how the book was made, and whose it is. */
+.colophon { break-before: page; page: colophon; min-height: 9.1in; display: flex; flex-direction: column; justify-content: flex-end; }
+@page colophon { @top-left { content: none; } @top-right { content: none; } @right-middle { content: none; } }
+.colophon .col-body { margin-left: var(--col); max-width: 30em; border-top: 1px solid var(--ink); padding-top: 10pt; }
+.colophon h2 { font: 700 10pt var(--sans); margin: 0 0 6pt; }
+.colophon p { font-size: 9pt; line-height: 1.55; color: var(--ink-2); margin: 0 0 6pt; }
+.colophon .sig-label { font: 400 8.4pt var(--sans); color: var(--muted); margin: 28pt 0 4pt; }
+.colophon .sig { display: inline-block; font: 400 italic 16pt/1.1 var(--serif); color: var(--ink); margin: 0; padding: 0 1.4in 3pt 2pt; border-bottom: 1px solid var(--ink); }
+.colophon .fp { font: 400 7.6pt var(--mono); color: var(--muted); }
