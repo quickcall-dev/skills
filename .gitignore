@@ -9,3 +9,7 @@ docs/
 # Dev harness artifacts
 pi-dev-harness-experiment.html
 pi-dev-harness.tar.gz
+
+# Python bytecode
+__pycache__/
+*.pyc
