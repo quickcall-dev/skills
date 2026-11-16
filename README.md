@@ -4,7 +4,7 @@
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-compatible-green?style=flat-square)](https://agentskills.io)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square)](LICENSE)
 
-Agent Skills for documentation management, Markdown export, Python development workflows, and frontend product UI foundations.
+Agent Skills for documentation management, Markdown export, Python development workflows, frontend product UI foundations, and standalone technical documents, diagrams, and interactive explainers.
 
 Works with **Claude Code**, **Cursor**, **GitHub Copilot**, **Gemini CLI**, **OpenAI Codex**, **Goose**, **Roo Code**, **JetBrains Junie**, and [25+ other agents](https://agentskills.io).
 
@@ -103,6 +103,47 @@ npx skills add quickcall-dev/skills --skill technical-manual
 
 </details>
 
+### Documents & Diagrams
+
+<details>
+<summary><b>html-creator</b> — standalone technical HTML documents</summary>
+
+Build findings, plans, architecture briefs, and manuals as one local HTML file: embedded diagrams, glossary, complete object contracts, failure states, test gates, and print support.
+
+**Use when:** writing an architecture plan, findings doc, or technical manual that must open from disk, stand alone without earlier context, and stay readable from phone to print.
+
+```bash
+npx skills add quickcall-dev/skills --skill html-creator
+```
+
+</details>
+
+<details>
+<summary><b>diagram-creator</b> — diagrams from one JSON specification</summary>
+
+Create consistent architecture flowcharts as editable draw.io files and deterministic SVG exports from one explicit JSON spec. System, pipeline, gate, state, sequence, and decision diagrams; failure and repair lanes by convention.
+
+**Use when:** an architecture decision or flow needs a diagram that stays editable and in sync with the document that embeds it.
+
+```bash
+npx skills add quickcall-dev/skills --skill diagram-creator
+```
+
+</details>
+
+<details>
+<summary><b>onion-explainer</b> — first-principles interactive explainers</summary>
+
+Create single-file explainer pages that peel a technical subject in layers, outside in: one shared interactive model, inline glossary, piece-by-piece formula cards, progress rail, and a benchmark-reading tool.
+
+**Use when:** teaching metrics, algorithms, or protocols from first principles — the reader must know what each number answers, its range, and what a good value is.
+
+```bash
+npx skills add quickcall-dev/skills --skill onion-explainer
+```
+
+</details>
+
 ### Python Development
 
 <details>
@@ -149,6 +190,9 @@ skills/
 ├── markdown-to-pdf/        # Markdown PDF export
 ├── product-ui-kit/         # React product UI foundation
 ├── technical-manual/       # Markdown → engineering-manual PDF
+├── html-creator/           # Standalone technical HTML documents
+├── diagram-creator/        # Diagrams from one JSON spec
+├── onion-explainer/        # First-principles interactive explainers
 ├── python-code-dev/        # Class-first Python packages
 └── python-notebook-dev/    # Reproducible numbered notebooks
 
