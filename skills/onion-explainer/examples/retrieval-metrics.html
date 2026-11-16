@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Retrieval metrics from first principles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F3; --surface:#F8FAFB; --ink:#17212B; --muted:#56636F; --line:#CBD3DB;
+  --g0:#DDE3E9; --g1:#BFDCEB; --g2:#62A9CB; --g3:#1D5C88;
+  --t0:#56636F; --t1:#17384D; --t2:#06202F; --t3:#FFFFFF;
+  --ideal:#C98A12; --accent:#1D5C88; --bad:#B4483A; --good:#2F7D54;
+  --sans:"Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --serif:"Source Serif 4", Georgia, "Times New Roman", serif;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10161D; --surface:#18212A; --ink:#E4EAF0; --muted:#9AA7B4; --line:#2E3A46;
+    --g0:#26313C; --g1:#2B5068; --g2:#3F88AE; --g3:#91CBEA;
+    --t0:#9AA7B4; --t1:#D9EAF4; --t2:#FFFFFF; --t3:#0C2433;
+    --ideal:#E8B04A; --accent:#91CBEA; --bad:#E58A7C; --good:#7CC79C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10161D; --surface:#18212A; --ink:#E4EAF0; --muted:#9AA7B4; --line:#2E3A46;
+  --g0:#26313C; --g1:#2B5068; --g2:#3F88AE; --g3:#91CBEA;
+  --t0:#9AA7B4; --t1:#D9EAF4; --t2:#FFFFFF; --t3:#0C2433;
+  --ideal:#E8B04A; --accent:#91CBEA; --bad:#E58A7C; --good:#7CC79C;
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 96px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);font-size:18px;line-height:1.62;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3,.ui{font-family:var(--sans)}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);line-height:1.02;letter-spacing:-.02em;margin:0 0 .6rem;font-weight:700}
+h2{font-size:clamp(1.6rem,3.6vw,2.2rem);line-height:1.1;letter-spacing:-.01em;margin:0 0 .35rem;font-weight:700}
+h3{font-size:1.1rem;margin:2rem 0 .4rem;font-weight:600}
+p{margin:.7rem 0;max-width:68ch}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ideal);outline-offset:2px}
+.wrap{max-width:820px;margin:0 auto;padding:0 20px}
+svg{display:block;width:100%;height:auto;max-width:100%}
+.num{font-family:var(--sans);font-variant-numeric:tabular-nums}
+
+/* sticky strip */
+.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.strip .wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+.mini{display:grid;grid-template-columns:repeat(40,1fr);gap:2px;flex:1 1 300px;min-width:240px}
+.mini button{border:0;padding:0;height:22px;border-radius:3px;cursor:pointer}
+.mini button.cut{margin-right:3px}
+.kpis{display:flex;gap:14px;font-family:var(--sans);font-size:.82rem;line-height:1.15;flex-wrap:wrap}
+.kpi b{display:block;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted)}
+
+/* grade fills */
+.c0{fill:var(--g0)}.c1{fill:var(--g1)}.c2{fill:var(--g2)}.c3{fill:var(--g3)}
+.t0{fill:var(--t0)}.t1{fill:var(--t1)}.t2{fill:var(--t2)}.t3{fill:var(--t3)}
+.bg0{background:var(--g0);color:var(--t0)}.bg1{background:var(--g1);color:var(--t1)}
+.bg2{background:var(--g2);color:var(--t2)}.bg3{background:var(--g3);color:var(--t3)}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--ink)}
+svg .lbl{fill:var(--muted);font-size:12px}
+svg .strong{font-weight:700}
+svg .axis{stroke:var(--line);stroke-width:1}
+svg .grid{stroke:var(--line);stroke-width:1;stroke-dasharray:2 4}
+svg .ln-acc{fill:none;stroke:var(--accent);stroke-width:2.5}
+svg .ln-mut{fill:none;stroke:var(--muted);stroke-width:2;stroke-dasharray:5 5}
+svg .ln-ideal{fill:none;stroke:var(--ideal);stroke-width:2.5}
+svg .dot-acc{fill:var(--accent)}
+svg .dot-ideal{fill:var(--ideal)}
+svg .brk{fill:none;stroke-width:2}
+svg .ok{stroke:var(--good)} svg .no{stroke:var(--bad)}
+svg text.okt{fill:var(--good);font-weight:700} svg text.not{fill:var(--bad);font-weight:700}
+svg .outline{fill:none;stroke:var(--muted);stroke-width:1.2;stroke-dasharray:3 3}
+svg .seg{stroke:var(--surface);stroke-width:2}
+svg .shade{fill:var(--accent);opacity:.08}
+
+/* hero */
+header.hero{padding:56px 0 24px}
+.hero-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center}
+.lede{font-size:1.18rem;color:var(--muted)}
+.onion g.ring{cursor:pointer}
+.onion g.ring circle{stroke:var(--bg);stroke-width:2;transition:filter .15s}
+.onion g.ring:hover circle,.onion g.ring:focus-visible circle{filter:brightness(1.12)}
+.onion g.ring:focus{outline:none}
+.onion g.ring:focus-visible circle{stroke:var(--ideal);stroke-width:3}
+
+/* sections */
+section.layer{padding:56px 0 24px;border-top:1px solid var(--line)}
+.depth{font-family:var(--sans);color:var(--muted);font-size:.95rem;margin-bottom:.3rem}
+.question{font-size:1.25rem;font-style:italic;margin:.2rem 0 1rem;max-width:60ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin:18px 0}
+.math{text-align:center;font-family:var(--serif);font-size:1.25rem;background:var(--surface);border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;overflow-x:auto;white-space:normal;line-height:2;border-radius:0 10px 10px 0}
+.math i{font-style:italic}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .2em}
+.frac>span:first-child{border-bottom:1.5px solid currentColor;padding:0 .25em}
+.frac>span:last-child{padding:0 .25em}
+.op{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1;margin:0 .15em}
+.op small{font-size:.6em}
+.op big{font-size:1.5em;line-height:1.05}
+.work{font-family:var(--sans);font-size:.95rem;color:var(--muted);overflow-x:auto;white-space:nowrap;padding:4px 0}
+.work b{color:var(--ink);font-variant-numeric:tabular-nums}
+.note{font-size:.98rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.insight b.tag{font-weight:700}
+.insight{font-family:var(--sans);font-size:1rem;background:var(--bg);border-radius:10px;padding:12px 14px;margin:12px 0}
+
+/* board */
+.board{display:grid;grid-template-columns:auto repeat(10,1fr);gap:6px;align-items:center}
+.board .rowlab{font-family:var(--sans);font-size:.78rem;color:var(--muted);padding-right:6px;text-align:right}
+.board button{border:0;border-radius:8px;aspect-ratio:1;min-height:30px;cursor:pointer;font-family:var(--sans);font-size:.85rem;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;transition:transform .1s}
+.board button:active{transform:scale(.93)}
+.board button small{font-size:.66rem;opacity:.85}
+.board .top5{box-shadow:inset 0 -4px 0 var(--ideal)}
+.board .top10{box-shadow:inset 0 -4px 0 color-mix(in srgb,var(--ideal) 45%,transparent)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-family:var(--sans);font-size:.85rem;margin-top:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:16px;height:16px;border-radius:4px;display:inline-block}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;font-family:var(--sans)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:.88rem;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:32px;align-items:center}
+.chip{border:0;border-radius:8px;padding:4px 10px;font-family:var(--sans);font-size:.85rem;cursor:pointer}
+.chip::after{content:"  ×";opacity:.7}
+.empty{font-family:var(--sans);font-size:.85rem;color:var(--muted)}
+
+/* table */
+.tbl{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;font-family:var(--sans);font-size:.92rem;min-width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+td.n{font-variant-numeric:tabular-nums}
+tfoot td{font-weight:700;border-bottom:0}
+
+/* funnel */
+.funnel{display:flex;flex-direction:column;align-items:center;gap:6px;margin:18px 0;font-family:var(--sans)}
+.stage{border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
+.stage .what{font-weight:600}
+.stage .met{font-variant-numeric:tabular-nums;font-size:.95rem}
+.stage .met b{font-size:1.15rem}
+.arrow{color:var(--muted);font-size:.9rem;line-height:1}
+
+.big{font-family:var(--sans);font-size:2.6rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.gauge{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+footer{padding:40px 0 60px;color:var(--muted);font-size:.95rem}
+
+@media (max-width:720px){
+  body{font-size:17px}
+  .hero-grid{grid-template-columns:1fr}
+  .board{gap:4px}
+  .board .rowlab{font-size:.68rem;padding-right:2px}
+  .board button{border-radius:6px;min-height:26px;font-size:.75rem}
+  .board button small{display:none}
+  .kpis{gap:10px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
+.insight b.tag{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card h4{font-family:var(--sans);margin:0 0 .3rem;font-size:1.05rem}
+.card p{font-size:.98rem;margin:.4rem 0}
+.reader{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-family:var(--sans);font-size:.95rem;margin:10px 0 4px;align-items:baseline}
+.reader dt{color:var(--muted);font-weight:600}
+.reader dd{margin:0}
+.metric{margin-top:48px}
+.metric h3{font-size:1.45rem;margin:0 0 .2rem}
+.bars{display:grid;grid-template-columns:minmax(90px,auto) 1fr 3.6em;gap:8px 12px;align-items:center;font-family:var(--sans);font-size:.92rem}
+.track{height:20px;background:var(--g0);border-radius:6px;position:relative;overflow:hidden}
+.fill{height:100%;border-radius:6px;background:var(--accent);transition:width .2s}
+.fill.step{background:var(--g2)}
+.bars .v{font-variant-numeric:tabular-nums;font-weight:700;text-align:right}
+.bars .kind{font-size:.75rem;color:var(--muted);font-weight:400;display:block}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.say{font-family:var(--sans);font-size:1rem;background:var(--bg);border-radius:10px;padding:12px 14px;margin:12px 0}
+ol.steps{padding-left:1.4em;max-width:68ch}
+ol.steps li{margin:.5rem 0}
+.form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-family:var(--sans)}
+.form label{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted);gap:4px}
+.form input{font:inherit;font-size:1.05rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;font-variant-numeric:tabular-nums}
+.form input:focus{border-color:var(--accent)}
+.out{font-family:var(--sans);font-size:1rem}
+.out p{margin:.5rem 0;max-width:none}
+.out .flag{color:var(--bad);font-weight:700}
+.out .goodt{color:var(--good);font-weight:700}
+.sub{font-family:var(--sans);font-size:.9rem;color:var(--muted)}
+@media (max-width:720px){.two{grid-template-columns:1fr}.form{grid-template-columns:1fr 1fr}}
+.where{font-family:var(--sans);font-size:.95rem;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:-6px 0 16px}
+.where dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+.where dt{font-family:var(--serif);font-style:italic;white-space:nowrap}
+.where dd{margin:0}
+.where .ex{margin:8px 0 0;color:var(--muted)}
+.term{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:help;text-decoration:underline dotted;text-decoration-color:var(--accent);text-decoration-thickness:1.5px;text-underline-offset:3px;display:inline}
+.term:hover,.term[aria-expanded="true"]{background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:3px}
+#tip{position:fixed;z-index:20;max-width:min(320px,calc(100vw - 24px));background:var(--ink);color:var(--bg);font-family:var(--sans);font-size:.9rem;line-height:1.45;padding:10px 12px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s}
+#tip.on{opacity:1;transform:none}
+#tip b{display:block;margin-bottom:2px}
+.anat{display:grid;gap:10px;margin:16px 0}
+.piece{display:grid;grid-template-columns:minmax(170px,32%) minmax(0,1fr);gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;align-items:start}
+.piece .tx{font-family:var(--serif);font-size:1.12rem;white-space:normal;line-height:1.9;text-align:center;display:block;min-width:0;background:var(--bg);border-radius:8px;overflow-x:auto;padding:14px 10px}
+.piece .tx .frac>span{white-space:nowrap}
+.piece .no{font-family:var(--sans);color:var(--muted);font-size:.8rem;font-weight:600}
+.piece h5{font-family:var(--sans);margin:0 0 4px;font-size:1.02rem}
+.piece p{margin:.3rem 0;font-size:.98rem;max-width:none}
+.piece .val{font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:.95rem;background:var(--bg);border-radius:8px;padding:6px 10px;margin-top:8px}
+.frac.sm{font-size:.82em;margin:0 .1em}
+.tex{font-family:var(--serif)}
+.together{font-family:var(--sans);font-size:1.02rem;background:var(--bg);border-left:4px solid var(--ideal);border-radius:0 10px 10px 0;padding:12px 16px;margin:16px 0}
+@media (max-width:720px){.piece{grid-template-columns:1fr;gap:8px}}
+details.anatbox{margin:14px 0 18px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+details.anatbox>summary{cursor:pointer;list-style:none;padding:12px 16px;font-family:var(--sans);font-weight:600;display:flex;gap:12px;align-items:center}
+details.anatbox>summary::-webkit-details-marker{display:none}
+details.anatbox>summary::before{content:"";width:9px;height:9px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(-45deg);transition:transform .15s;flex:none}
+details.anatbox[open]>summary::before{transform:rotate(45deg)}
+details.anatbox>summary .cnt{margin-left:auto;color:var(--muted);font-weight:400;font-size:.85rem}
+details.anatbox>summary:hover{color:var(--accent)}
+details.anatbox .inner{padding:0 14px 14px}
+details.anatbox .anat{margin-top:0}
+details.anatbox .together{margin-bottom:0}
+.piece .mt{overflow-x:auto;margin:6px 0}
+.piece .mt table{font-size:.85rem;min-width:0}
+.piece .mt th,.piece .mt td{padding:4px 9px}
+.piece ol li{margin:.2rem 0;font-size:.98rem}
+.pipe{display:flex;flex-direction:column;margin:18px 0;font-family:var(--sans)}
+.stg{display:grid;grid-template-columns:190px minmax(0,1fr) 200px;gap:18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.stg .sn{font-size:.75rem;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.stg h5{margin:2px 0 4px;font-size:1rem}
+.stg .d{font-size:.84rem;color:var(--muted);line-height:1.4}
+.chipsd{display:flex;flex-wrap:wrap;gap:6px}
+.chipd{border-radius:8px;padding:5px 9px;font-size:.8rem;font-weight:600;display:inline-flex;flex-direction:column;line-height:1.2}
+.chipd small{font-weight:400;font-size:.7rem;opacity:.85}
+.chipd.miss{outline:2px dashed var(--bad);outline-offset:-2px}
+.c40{display:grid;grid-template-columns:repeat(10,minmax(10px,20px));gap:3px}
+.c40 span{aspect-ratio:1;border-radius:3px}
+.c40 span.t10{box-shadow:inset 0 -3px 0 var(--ideal)}
+.c10{display:flex;gap:4px}
+.c10 span.big{flex:0 1 28px;min-width:0;aspect-ratio:1;border-radius:6px;font-size:.75rem;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.c10 span.first{outline:3px solid var(--ideal);outline-offset:1px}
+.rowl{font-size:.75rem;color:var(--muted);margin:6px 0 3px}
+.rowl:first-child{margin-top:0}
+.met-b{border-left:3px solid var(--accent);padding-left:12px}
+.met-b .mv{font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.met-b .mq{font-size:.8rem;color:var(--muted);line-height:1.35}
+.met-b .fix{font-size:.78rem;margin-top:6px;background:var(--bg);border-radius:6px;padding:5px 8px;line-height:1.35}
+.meter{height:6px;background:var(--g0);border-radius:3px;margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.yes{color:var(--good)}.nope{color:var(--bad)}
+.flow{display:flex;align-items:flex-start;gap:10px;padding:8px 0 8px 28px;font-size:.86rem;color:var(--muted);line-height:1.4}
+.flow .ar{font-size:1.2rem;line-height:1}
+.flow .loss{color:var(--bad);font-weight:600}
+.flow .keep{color:var(--good);font-weight:600}
+@media (max-width:760px){.stg{grid-template-columns:1fr;gap:12px}.flow{padding-left:12px}}
+.tocbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:8px 0 24px;font-family:var(--sans)}
+.tocbox h2{font-size:1.1rem;margin:0 0 .5rem}
+.tocbox ol{margin:0;padding-left:1.4em;columns:2;column-gap:32px}
+.tocbox ol ol{columns:1;padding-left:1.2em;margin:.2rem 0 .4rem;list-style:lower-alpha}
+.tocbox li{break-inside:avoid;margin:.2rem 0;font-size:.95rem}
+.tocbox ol ol li{font-size:.88rem}
+.tocbox a{color:var(--ink);text-decoration:none}
+.tocbox a:hover{color:var(--accent);text-decoration:underline}
+.metric,[id^="m-"],#terms,#refs,#judge{scroll-margin-top:96px}
+@media (max-width:720px){.tocbox ol{columns:1}}
+#progress{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);height:3px;z-index:30;pointer-events:none}
+#progress i{display:block;height:100%;background:var(--accent);transform-origin:0 50%;transform:scaleX(0)}
+.rail{position:fixed;left:18px;top:50%;transform:translateY(-50%);z-index:25;display:flex;flex-direction:column;gap:9px;padding:10px 0}
+.rail button{display:block;border:0;padding:4px 0;background:none;cursor:pointer}
+.rail button i{display:block;height:2px;width:8px;border-radius:2px;transition:width .18s ease-out,background .15s}
+.rail button.h2 i{background:color-mix(in srgb,var(--muted) 70%,transparent)}
+.rail button.h3 i{background:color-mix(in srgb,var(--muted) 30%,transparent)}
+.rail button.on i{background:var(--accent)}
+.railcard{position:fixed;z-index:26;width:300px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:12px 14px;font-family:var(--sans);pointer-events:none;opacity:0;transform:translateX(-4px);transition:opacity .12s,transform .12s}
+.railcard.on{opacity:1;transform:none}
+.railcard .rk{font-size:.72rem;color:var(--muted);font-weight:600}
+.railcard b{display:block;font-size:.95rem;margin:2px 0 6px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.railcard p{margin:0;font-size:.86rem;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;max-width:none}
+@media (max-width:1060px){.rail,.railcard{display:none}}
+</style>
+</head>
+<body>
+<div id="progress" aria-hidden="true"><i></i></div>
+
+<div class="strip" aria-label="Ranked list from section 3 and four example metrics">
+  <div class="wrap">
+    <div class="mini" id="mini"></div>
+    <div class="kpis" id="kpis"></div>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <h1>Retrieval metrics from first principles</h1>
+      <p class="lede">Each retrieval metric answers one question about one simulated user. When you know the simulated user, you know what the number means, its lowest and highest value, and what a good value is.</p>
+      <p class="ui" style="font-size:.95rem;color:var(--muted)">Click a ring to go to a section. Section 6 explains a set of benchmark results in plain words.</p>
+    </div>
+    <div id="onion"></div>
+  </div>
+</header>
+
+<nav class="toc wrap" aria-label="Contents">
+  <div class="tocbox">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#s1" data-go="s1">A retrieval system can fail in two ways only</a><ol><li><a href="#terms" data-go="terms">Terms used on this page</a></li></ol></li>
+      <li><a href="#s2" data-go="s2">The simplest case: one relevant document</a></li>
+      <li><a href="#s3" data-go="s3">The real case: many relevant documents</a><ol>
+        <li><a href="#m-success" data-go="m-success">Success@k</a></li>
+        <li><a href="#m-recall" data-go="m-recall">Recall@k</a></li>
+        <li><a href="#m-precision" data-go="m-precision">Precision@k</a></li>
+        <li><a href="#m-mrr" data-go="m-mrr">MRR</a></li>
+        <li><a href="#m-ap" data-go="m-ap">AP and MAP</a></li>
+        <li><a href="#m-dcg" data-go="m-dcg">DCG</a></li>
+        <li><a href="#m-ndcg" data-go="m-ndcg">nDCG</a></li>
+        <li><a href="#m-pipeline" data-go="m-pipeline">How the metrics fit a two-stage system</a></li></ol></li>
+      <li><a href="#s4" data-go="s4">The lowest and highest value of each metric</a></li>
+      <li><a href="#s5" data-go="s5">What is a good value?</a><ol>
+        <li><a href="#refs" data-go="refs">Reference values from public benchmarks</a></li>
+        <li><a href="#judge" data-go="judge">The procedure to judge a value</a></li></ol></li>
+      <li><a href="#s6" data-go="s6">Read a benchmark result</a></li>
+    </ol>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- S1 -->
+<section class="layer" id="s1">
+  <div class="depth">Section 1 of 6 (outer layer)</div>
+  <h2>A retrieval system can fail in two ways only</h2>
+  <p class="question">What must a retrieval system do?</p>
+  <h3 id="terms" style="margin-top:0">Terms used on this page</h3>
+  <p>Some words in retrieval have more than one meaning. This table gives the meaning on this page. The last column shows the meanings that can cause confusion.</p>
+  <div class="insight"><b class="tag">You do not have to come back to this table.</b> On the full page, a <span style="text-decoration:underline dotted;text-decoration-color:var(--accent);text-underline-offset:3px">dotted line</span> under a word shows a defined term. Point at the word, or tap it, to see its meaning in place.</div>
+  <div class="tbl">
+  <table>
+    <thead><tr><th>Term</th><th>Meaning on this page</th><th>Do not confuse with</th></tr></thead>
+    <tbody>
+      <tr><td>Query</td><td>The text that a person types to find information.</td><td>–</td></tr>
+      <tr><td>Document</td><td>One item in the collection, for example a passage or a web page.</td><td>–</td></tr>
+      <tr><td>Rank</td><td>The position of a document in the result list. Rank 1 is the top.</td><td>–</td></tr>
+      <tr><td>Relevant</td><td>A person judged the document as useful for the query (grade more than 0).</td><td>A high similarity score from a model. A high score does not make a document relevant.</td></tr>
+      <tr><td>qrels</td><td>The set of relevance judgments for all queries.</td><td>–</td></tr>
+      <tr><td>k (in @k)</td><td>The number of top results that a metric uses. In Recall@40, k = 40.</td><td>The k in k-nearest-neighbor search.</td></tr>
+      <tr><td>R</td><td>The total number of relevant documents for one query in the qrels. R includes relevant documents that the system did not return. Example: if people judged 6 documents as relevant for a query, R = 6.</td><td>–</td></tr>
+      <tr><td>Retriever, reranker</td><td>Stage 1 finds candidate documents. Stage 2 changes the order of these candidates.</td><td>–</td></tr>
+      <tr><td>System</td><td>The full retrieval pipeline that you evaluate.</td><td>–</td></tr>
+      <tr><td>Model</td><td>Always a machine-learning model, for example an embedding model or a cross-encoder.</td><td>A “user model” in IR papers. This page uses “simulated user” for that idea.</td></tr>
+      <tr><td>Simulated user</td><td>A fixed set of rules inside a metric. The rules say how a person reads the list: where the person stops and what the person wants. It is not a real person, and it is not a machine-learning model.</td><td>1. A real user of your product.<br>2. The “reader” in RAG and open-domain QA: the LLM or QA model that reads the retrieved passages. This page does not use the word “reader”.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>A person has an information need and types a query. The system gives a ranked list. The person reads the list from the top and stops at some point. The system must put the relevant documents above that point.</p>
+  <div class="panel"><div id="svgFail"></div></div>
+  <div class="two">
+    <div class="card"><h4>Failure 1: a finding failure</h4><p>The relevant document is not in the list. No change to the order can correct this failure. Recall measures this failure.</p></div>
+    <div class="card"><h4>Failure 2: an ordering failure</h4><p>The relevant document is in the list, but at a low rank. The user stops before the document. MRR, DCG, and nDCG measure this failure.</p></div>
+  </div>
+  <p>Each metric contains one <em>simulated user</em> (see the table of terms above). The rules of the simulated user tell you three things: where the user stops, what the user wants, and which failure the metric can see. All metrics on this page come from this idea.</p>
+  <div class="insight"><b class="tag">Note:</b> A metric can only see documents that a person judged. The set of judgments has the name <em>qrels</em>. A metric counts an unjudged document as not relevant.</div>
+</section>
+
+<!-- S2 -->
+<section class="layer" id="s2">
+  <div class="depth">Section 2 of 6</div>
+  <h2>The simplest case: one relevant document</h2>
+  <p class="question">What does each metric do when only the rank changes?</p>
+  <p>A query has exactly one relevant document. Move the slider to change the rank of this document. The bars show the value of each metric for this query. All bars use the same scale, from 0 to 1.</p>
+  <div class="panel">
+    <div id="svgOne"></div>
+    <label class="sub" for="rankSlider">Rank of the relevant document: <b class="num" id="rankVal"></b></label>
+    <input type="range" id="rankSlider" min="1" max="50" value="3" aria-describedby="oneSay">
+    <div class="bars" id="oneBars" style="margin-top:14px"></div>
+    <div class="say" id="oneSay"></div>
+  </div>
+  <p>Look at the shape of each bar when you move the slider. Success@5, Success@10, and Recall@40 are <em>steps</em>. They are 1 or 0, and they change only at rank 5, 10, or 40. RR@10 and nDCG@10 are <em>curves</em>. They decrease at each rank. RR decreases fast. nDCG decreases slowly.</p>
+  <h3>Use this table to read a value</h3>
+  <div class="tbl" id="tblOne"></div>
+  <div class="insight"><b class="tag">Translation rule:</b> For one relevant document, nDCG@10 = 1 / log<sub>2</sub>(rank + 1). Thus, nDCG@10 = 0.63 is equal to rank 2. nDCG@10 = 0.50 is equal to rank 3. nDCG@10 = 0.29 is equal to rank 10. Use this rule to get a feeling for an nDCG value.</div>
+  <details class="anatbox"><summary><span>Where does this rule come from? Piece by piece</span><span class="cnt">4 pieces</span></summary><div class="inner"><div class="anat"><div class="piece"><div class="tx tex"><span class="frac"><span>1</span><span>log<sub>2</sub>(<i>rank</i> + 1)</span></span></div><div><div class="no">Piece 1</div><h5>DCG of your list</h5><p>The query has one relevant document. Its gain is 1 (grade 1, linear gain). At this rank, the user gets 1 divided by the discount.</p><div class="val">Rank 3: 1 ÷ log<sub>2</sub>4 = 1 ÷ 2 = 0.50</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>1</span><span>log<sub>2</sub>(1 + 1)</span></span> = 1</div><div><div class="no">Piece 2</div><h5>IDCG: the ideal list</h5><p>The ideal list puts the one relevant document at rank 1. There, the discount is 1. Thus, IDCG = 1.</p><div class="val">IDCG = 1 ÷ 1 = 1</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>DCG</span><span>1</span></span> = DCG</div><div><div class="no">Piece 3</div><h5>nDCG is equal to the DCG</h5><p>Division by 1 changes nothing. Thus, <b>for one relevant document, nDCG is equal to 1 ÷ log<sub>2</sub>(rank + 1).</b></p><div class="val">Rank 3: nDCG@10 = 0.50</div></div></div><div class="piece"><div class="tx tex"><i>rank</i> = 2<sup>1 / <i>nDCG</i></sup> − 1</div><div><div class="no">Piece 4</div><h5>Back from nDCG to a rank</h5><p>The same rule, solved for the rank. Use it to translate an nDCG value into “the relevant document is at about this rank”.</p><div class="val">nDCG = 0.50: 2<sup>2</sup> − 1 = 3 &nbsp;·&nbsp; nDCG = 0.63: 2<sup>1.59</sup> − 1 ≈ 2</div></div></div></div><div class="together"><b>How the pieces come together.</b> With one relevant document, the ideal value is 1 (piece 2). Thus, nDCG is only the discount at the rank of the document (pieces 1 and 3). Solve the rule for the rank to read any nDCG value as a rank (piece 4).</div></div></details>
+</section>
+
+<!-- S3 -->
+<section class="layer" id="s3">
+  <div class="depth">Section 3 of 6</div>
+  <h2>The real case: many relevant documents with grades</h2>
+  <p class="question">How does each simulated user see a full list?</p>
+  <p>Below is the top 40 for one query. Each slot has a relevance grade from 0 to 3. Click a slot to change its grade. All charts in this section, and the strip at the top of the page, then show new values.</p>
+  <div class="panel">
+    <div class="board" id="board"></div>
+    <div class="legend" aria-hidden="true">
+      <span><i class="sw bg0"></i>0 not relevant</span>
+      <span><i class="sw bg1"></i>1 partially relevant</span>
+      <span><i class="sw bg2"></i>2 relevant</span>
+      <span><i class="sw bg3"></i>3 highly relevant</span>
+      <span><i class="sw" style="background:var(--ideal)"></i>the line under a slot shows the top 5 and the top 10</span>
+    </div>
+    <div class="controls" id="presets"></div>
+    <h3>Relevant documents that the system did not return</h3>
+    <p style="font-size:.95rem;color:var(--muted);margin-top:0">These documents are in the qrels, but not in the top 40. They are finding failures.</p>
+    <div class="chips" id="missed"></div>
+    <div class="controls">
+      <button class="btn" data-add="1">Add a missed document, grade 1</button>
+      <button class="btn" data-add="2">Add a missed document, grade 2</button>
+      <button class="btn" data-add="3">Add a missed document, grade 3</button>
+    </div>
+  </div>
+  <p>Symbols: <i>rel<sub>i</sub></i> is the grade at rank <i>i</i>. <i>R</i> is the number of relevant documents for the query, which includes the missed documents. Current value: <span class="num" id="rnow"></span>.</p>
+
+  <div class="metric" id="m-success">
+    <h3>Success@k</h3>
+    <dl class="reader">
+      <dt>Simulated user</dt><dd>Reads exactly k results. Needs one relevant document.</dd>
+      <dt>Question</dt><dd>Did the user find at least one relevant document?</dd>
+      <dt>Range</dt><dd>For one query: 0 or 1. For a set of queries: 0 to 1.</dd>
+      <dt>Ignores</dt><dd>All relevant documents after the first. The exact rank inside the top k.</dd>
+    </dl>
+    <div class="math tex"><i>Success</i>@<i>k</i> = 𝟙[ | <i>Rel</i><sub><i>q</i></sub> ∩ <i>Top</i><sub><i>k</i></sub> | ≥ 1 ]</div>
+    <details class="anatbox"><summary><span>Understand this formula, piece by piece</span><span class="cnt">4 pieces</span></summary><div class="inner"><div class="anat"><div class="piece"><div class="tx tex"><i>Rel</i><sub><i>q</i></sub> ∩ <i>Top</i><sub><i>k</i></sub></div><div><div class="no">Piece 1</div><h5>Relevant documents in the top k</h5><p>The documents that are relevant <b>and</b> are in the top k. This is the same set as in Recall@k.</p><div class="val">First relevant document at rank 7. Top 5: no documents. Top 10: 1 document.</div></div></div><div class="piece"><div class="tx tex">| … | ≥ 1</div><div><div class="no">Piece 2</div><h5>Is there at least one?</h5><p>Count the documents in the set, and ask one yes-or-no question: is the count 1 or more? Two relevant documents give the same answer as one.</p><div class="val">k = 5: 0 ≥ 1 is no. &nbsp;·&nbsp; k = 10: 1 ≥ 1 is yes.</div></div></div><div class="piece"><div class="tx tex">𝟙[ … ]</div><div><div class="no">Piece 3</div><h5>Change yes or no into a number</h5><p>The symbol 𝟙 is the <em>indicator</em>. It gives 1 for yes and 0 for no. In plain English: <b>did the user find something? 1 means yes.</b></p><div class="val">Success@5 = 0 &nbsp;·&nbsp; Success@10 = 1</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>1</span><span>|<i>Q</i>|</span></span><span class="op"><small>|<i>Q</i>|</small><big>Σ</big><small><i>q</i>=1</small></span></div><div><div class="no">Piece 4</div><h5>The mean for all queries</h5><p>Add the 1s and 0s of all queries, and divide by the number of queries. In plain English: <b>the fraction of queries where the user found something.</b></p><div class="val">3 queries with 1, 1, 0 → 2 ÷ 3 = 0.67</div></div></div></div><div class="together"><b>How the pieces come together.</b> For each query, look at the top k and ask: is there at least one relevant document (pieces 1 and 2)? Write 1 for yes and 0 for no (piece 3). The reported value is the fraction of queries with a yes (piece 4).</div></div></details>
+    <div class="panel"><div id="svgSuccess"></div></div>
+    <p><b class="ui">How to read a value.</b> Success@5 = 0.72 means: for 72 of 100 queries, the top 5 contains a relevant document. For 28 of 100 queries, the user finds nothing. The value 1 − Success@k is a failure rate, and a failure rate is easy to explain to other people.</p>
+  </div>
+
+  <div class="metric" id="m-recall">
+    <h3>Recall@k</h3>
+    <dl class="reader">
+      <dt>Simulated user</dt><dd>Takes the top k results as a group, and does not look at their order. Wants every relevant document. In a real system, this user is often the reranker: it receives the top 40 and can only use what it receives.</dd>
+      <dt>Question</dt><dd>What fraction of all relevant documents is in the top k?</dd>
+      <dt>Range</dt><dd>0 to 1. Here, <i>R</i> is the total number of relevant documents for the query, and <i>k</i> is the number of top results. If there are more relevant documents than top results (<i>R</i> more than <i>k</i>), not all of them can fit. Then the maximum is <i>k</i> ÷ <i>R</i>. Example: <i>R</i> = 50 and <i>k</i> = 40 gives a maximum Recall@40 of 40 ÷ 50 = 0.8.</dd>
+      <dt>Ignores</dt><dd>The order inside the top k.</dd>
+    </dl>
+    <div class="math tex"><i>Recall</i>@<i>k</i> = <span class="frac"><span>| <i>Rel</i><sub><i>q</i></sub> ∩ <i>Top</i><sub><i>k</i></sub> |</span><span>| <i>Rel</i><sub><i>q</i></sub> |</span></span> = <span class="frac"><span>| <i>Rel</i><sub><i>q</i></sub> ∩ <i>Top</i><sub><i>k</i></sub> |</span><span><i>R</i></span></span></div>
+    <p>Read the formula piece by piece. The example query has 6 relevant documents, and the system returns 4 of them in its top 40.</p>
+    <details class="anatbox"><summary><span>Understand this formula, piece by piece</span><span class="cnt">5 pieces</span></summary><div class="inner"><div class="anat"><div class="piece"><div class="tx tex"><i>Top</i><sub><i>k</i></sub></div><div><div class="no">Piece 1</div><h5>The top k</h5><p>The set of the first k results that the system returns, from rank 1 to rank k.</p><div class="val">k = 40: the 40 documents at ranks 1 to 40</div></div></div><div class="piece"><div class="tx tex"><i>Rel</i><sub><i>q</i></sub></div><div><div class="no">Piece 2</div><h5>All relevant documents for query q</h5><p>The set of all documents that people judged as relevant for this query in the qrels. This set includes relevant documents that the system did not return.</p><div class="val">6 documents</div></div></div><div class="piece"><div class="tx tex"><i>Rel</i><sub><i>q</i></sub> ∩ <i>Top</i><sub><i>k</i></sub></div><div><div class="no">Piece 3</div><h5>Relevant and in the top k</h5><p>The symbol ∩ means “in both sets”. Thus, this piece is the set of documents that are relevant <b>and</b> are in the top k. In plain English: the relevant documents that the system found in time.</p><div class="val">4 documents</div></div></div><div class="piece"><div class="tx tex">| · |</div><div><div class="no">Piece 4</div><h5>Count the items</h5><p>The two vertical bars mean “the number of items in this set”. |Rel<sub>q</sub>| has a short name: R.</p><div class="val">|Rel ∩ Top<sub>40</sub>| = 4 &nbsp;·&nbsp; R = |Rel| = 6</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>found</span><span><i>R</i></span></span></div><div><div class="no">Piece 5</div><h5>Divide what was found by what exists</h5><p>In plain English: <b>the share of the relevant documents that the top k caught.</b> The value 1 means that no relevant document is missing.</p><div class="val">Recall@40 = 4 ÷ 6 = 0.67</div></div></div></div>
+    <div class="together"><b>How the pieces come together.</b> Count the relevant documents in the top k (pieces 1 to 4). Divide this count by the number of relevant documents that exist (piece 5). For a set of queries, calculate Recall@k for each query and then the mean.</div></div></details>
+    <div class="panel"><div id="svgRecall"></div><div class="work" id="workRecall"></div></div>
+    <p><b class="ui">How to read a value.</b> Recall@40 = 0.85 means: 15% of the relevant documents are not in the top 40. If a reranker uses the top 40, it can never show these documents. Thus, Recall@40 is the upper limit for all stages after the retriever.</p>
+  </div>
+
+  <div class="metric" id="m-precision">
+    <h3>Precision@k</h3>
+    <dl class="reader">
+      <dt>Simulated user</dt><dd>Reads all k results, and counts how many of them were useful.</dd>
+      <dt>Question</dt><dd>What fraction of the top k is relevant?</dd>
+      <dt>Range</dt><dd>0 to 1. If there are fewer relevant documents than top results (<i>R</i> less than <i>k</i>), the top k cannot be full of relevant documents. Then the maximum is <i>R</i> ÷ <i>k</i>. Example: <i>R</i> = 2 and <i>k</i> = 10 gives a maximum Precision@10 of 2 ÷ 10 = 0.2.</dd>
+      <dt>Ignores</dt><dd>The order inside the top k. All relevant documents after rank k.</dd>
+    </dl>
+    <div class="math tex"><i>Precision</i>@<i>k</i> = <span class="frac"><span>| <i>Rel</i><sub><i>q</i></sub> ∩ <i>Top</i><sub><i>k</i></sub> |</span><span><i>k</i></span></span></div>
+    <p>The same example: 4 relevant documents are in the top 40.</p>
+    <details class="anatbox"><summary><span>Understand this formula, piece by piece</span><span class="cnt">3 pieces</span></summary><div class="inner"><div class="anat"><div class="piece"><div class="tx tex">| <i>Rel</i><sub><i>q</i></sub> ∩ <i>Top</i><sub><i>k</i></sub> |</div><div><div class="no">Piece 1</div><h5>The number of relevant documents in the top k</h5><p>The same count as in Recall@k: documents that are relevant and are in the top k.</p><div class="val">4</div></div></div><div class="piece"><div class="tx tex"><i>k</i></div><div><div class="no">Piece 2</div><h5>The number of results that the user reads</h5><p>All k slots, both useful and not useful.</p><div class="val">k = 40</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>found</span><span><i>k</i></span></span></div><div><div class="no">Piece 3</div><h5>Divide what was found by what was read</h5><p>In plain English: <b>the share of the reading that was useful.</b> The value 1 means that every result in the top k is relevant.</p><div class="val">Precision@40 = 4 ÷ 40 = 0.10</div></div></div></div>
+    <div class="together"><b>Recall and precision compared.</b> The two formulas have the same numerator: the relevant documents in the top k. Recall divides by what <b>exists</b> (R). Precision divides by what the user <b>read</b> (k). Thus, recall asks “did we miss anything?”, and precision asks “did we waste the reading?”. The chart in the Recall@k section shows both values for each k.</div></div></details>
+    <p>For this reason, Precision@10 is low for queries with few relevant documents, also for a perfect system.</p>
+  </div>
+
+  <div class="metric" id="m-mrr">
+    <h3>MRR (Mean Reciprocal Rank)</h3>
+    <dl class="reader">
+      <dt>Simulated user</dt><dd>Reads from the top and stops at the first relevant document.</dd>
+      <dt>Question</dt><dd>How far did the user go to find the first relevant document?</dd>
+      <dt>Range</dt><dd>0 to 1. For one query, the only possible values are 1, 1/2, 1/3, 1/4, and so on, or 0.</dd>
+      <dt>Ignores</dt><dd>All relevant documents after the first. Grades.</dd>
+    </dl>
+    <div class="math tex"><i>MRR</i> = <span class="frac"><span>1</span><span>|<i>Q</i>|</span></span><span class="op"><small>|<i>Q</i>|</small><big>Σ</big><small><i>q</i>=1</small></span><span class="frac"><span>1</span><span><i>rank</i><sub><i>q</i></sub></span></span></div>
+    <p>Read this formula from the inside to the outside. Each card below takes one piece. It says what the piece means in plain English and shows its value for three example queries: A, B, and C.</p>
+    <details class="anatbox"><summary><span>Understand this formula, piece by piece</span><span class="cnt">6 pieces</span></summary><div class="inner"><div class="anat"><div class="piece"><div class="tx tex"><i>rank</i><sub><i>q</i></sub></div><div><div class="no">Piece 1</div><h5>The rank of the first relevant document for query q</h5><p>How far down the list the user must go to find the first useful document. The user reads rank<sub>q</sub> documents, and only the last of them is useful. A smaller number is better.</p><div class="val">Query A: 1 &nbsp;·&nbsp; Query B: 2 &nbsp;·&nbsp; Query C: 5</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>1</span><span><i>rank</i><sub><i>q</i></sub></span></span></div><div><div class="no">Piece 2</div><h5>1 divided by the rank: the reciprocal rank (RR)</h5><p>In plain English: <b>the fraction of the reading that was useful, at the moment the user stops.</b> At rank 5, the user read 5 documents and 1 was useful. Thus, 1 of 5, or 0.20, of the reading was useful.</p><p>A larger number is better. The value is always between 0 and 1. If the top k contains no relevant document, the value is 0.</p><div class="val">A: 1 ÷ 1 = 1.00 &nbsp;·&nbsp; B: 1 ÷ 2 = 0.50 &nbsp;·&nbsp; C: 1 ÷ 5 = 0.20</div></div></div><div class="piece"><div class="tx tex"><span class="op"><small>|<i>Q</i>|</small><big>Σ</big><small><i>q</i>=1</small></span></div><div><div class="no">Piece 3</div><h5>The sum for all queries</h5><p>Add the value of every query, from the first query (q = 1) to the last query (q = |Q|). The symbol Σ means “add all of these”.</p><div class="val">1.00 + 0.50 + 0.20 = 1.70</div></div></div><div class="piece"><div class="tx tex">|<i>Q</i>|</div><div><div class="no">Piece 4</div><h5>The number of queries</h5><p>How many queries are in your test set. Q is the set of queries. The two vertical bars mean “the size of the set”.</p><div class="val">|Q| = 3</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>1</span><span>|<i>Q</i>|</span></span><span class="op"><small>|<i>Q</i>|</small><big>Σ</big><small><i>q</i>=1</small></span></div><div><div class="no">Piece 5</div><h5>The mean</h5><p>Add, then divide by the number of queries. In plain English: <b>the RR of a typical query.</b> With piece 2: for a typical query, this fraction of the reading up to the first useful document was useful.</p><div class="val">MRR = 1.70 ÷ 3 = 0.567</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>1</span><span><i>MRR</i></span></span></div><div><div class="no">Piece 6</div><h5>1 divided by MRR: back to a rank</h5><p>This undoes piece 2 for the full set of queries. It changes the score back into a distance. In plain English: <b>a typical number of documents that the user reads to get to the first useful one.</b> The name of this number is the <em>harmonic mean</em> rank.</p><p>Note: this is 1 divided by MRR. MRR divided by 1 does not change the value.</p><div class="val">1 ÷ 0.567 ≈ 1.76 documents</div></div></div></div>
+    <div class="together"><b>How the pieces come together.</b> For each query, find how much of the reading up to the first useful document was useful (pieces 1 and 2). Then take the value of a typical query (pieces 3 to 5). To say the result as a distance, divide 1 by it (piece 6).</div></div></details>
+    <div class="panel"><div id="svgRR"></div><div class="work" id="workRR"></div></div>
+    <h4 class="ui" style="margin:1.6rem 0 .3rem;font-size:1.05rem">Why 1 ÷ rank, and not the rank itself?</h4>
+    <p>There are three reasons. First, a rank has no upper limit, and a query with no relevant document has no rank. The value 1 ÷ rank puts all queries on one scale from 0 to 1, and “not found” becomes 0. Second, a larger value is better, as for all other metrics on this page. Third, the reciprocal gives most weight to the top ranks: <span class="tex"><span class="frac sm"><span>1</span><span>1</span></span> − <span class="frac sm"><span>1</span><span>2</span></span> = 0.50</span>, but <span class="tex"><span class="frac sm"><span>1</span><span>5</span></span> − <span class="frac sm"><span>1</span><span>6</span></span> = 0.03</span>. This is correct for a user who cares most about the first results.</p>
+    <p><b class="ui">Why is 1.76 not the normal mean rank?</b> The normal mean of the ranks is <span class="tex"><span class="frac sm"><span>1 + 2 + 5</span><span>3</span></span> = 2.67</span>. The harmonic mean rank is <span class="tex"><span class="frac sm"><span>1</span><span>0.567</span></span> = 1.76</span>. It is smaller because piece 2 gives most weight to the top ranks. Thus, MRR is sensitive to the first few ranks and almost ignores changes lower in the list.</p>
+    <p><b class="ui">How to read a value.</b> MRR = 0.40 gives <span class="tex"><span class="frac sm"><span>1</span><span>0.40</span></span> = 2.5</span>. Thus, the first relevant document is typically near rank 2 or 3. <b class="ui">Caution:</b> one MRR can come from very different results. For example, if half of the queries have the first relevant document at rank 1 and the other half have none, MRR is <span class="tex"><span class="frac sm"><span>1 + 0</span><span>2</span></span> = 0.50</span>. Look at the RR values for each query before you make a decision.</p>
+  </div>
+
+  <div class="metric" id="m-ap">
+    <h3>AP and MAP (Mean Average Precision)</h3>
+    <dl class="reader">
+      <dt>Simulated user</dt><dd>Wants all relevant documents. At each relevant document, records the precision so far.</dd>
+      <dt>Question</dt><dd>How much reading did each relevant document cost, on average?</dd>
+      <dt>Range</dt><dd>0 to 1. The value is 1 only if all relevant documents are at the top ranks.</dd>
+      <dt>Ignores</dt><dd>Grades. A missed document adds 0, so AP also sees finding failures.</dd>
+    </dl>
+    <div class="math tex"><i>AP</i> = <span class="frac"><span>1</span><span><i>R</i></span></span><span class="op"><small><i>N</i></small><big>Σ</big><small><i>i</i>=1</small></span> <i>Precision</i>@<i>i</i> · 𝟙[ <i>rel</i><sub><i>i</i></sub> &gt; 0 ] &nbsp;&nbsp;&nbsp; <i>MAP</i> = mean of <i>AP</i> for all queries</div>
+    <details class="anatbox"><summary><span>Understand this formula, piece by piece</span><span class="cnt">5 pieces</span></summary><div class="inner"><div class="anat"><div class="piece"><div class="tx tex">𝟙[ <i>rel</i><sub><i>i</i></sub> &gt; 0 ]</div><div><div class="no">Piece 1</div><h5>A switch: is rank i relevant?</h5><p>1 if the document at rank i is relevant, 0 if not. In plain English: <b>only the ranks of relevant documents count.</b> All other ranks add nothing.</p><div class="val">Example: relevant documents at ranks 1, 3, and 6</div></div></div><div class="piece"><div class="tx tex"><i>Precision</i>@<i>i</i></div><div><div class="no">Piece 2</div><h5>The precision at that rank</h5><p>The relevant documents in the top i, divided by i. In plain English: <b>how clean the list is at the moment the user arrives at this relevant document.</b></p><div class="val">Rank 1: 1 ÷ 1 = 1.00 &nbsp;·&nbsp; Rank 3: 2 ÷ 3 = 0.67 &nbsp;·&nbsp; Rank 6: 3 ÷ 6 = 0.50</div></div></div><div class="piece"><div class="tx tex"><span class="op"><small><i>N</i></small><big>Σ</big><small><i>i</i>=1</small></span></div><div><div class="no">Piece 3</div><h5>Add for all ranks</h5><p>Add the values for all ranks from 1 to N, the length of the list. Because of the switch, only the relevant ranks add a value.</p><div class="val">1.00 + 0.67 + 0.50 = 2.17</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>1</span><span><i>R</i></span></span></div><div><div class="no">Piece 4</div><h5>Divide by all relevant documents</h5><p>R is the total number of relevant documents, also the ones that the system did not return. A missed document adds nothing to the sum, but it counts in R. Thus, <b>a missed document makes AP lower.</b></p><div class="val">R = 4 (one document was missed): 2.17 ÷ 4 = 0.54</div></div></div><div class="piece"><div class="tx tex"><i>MAP</i></div><div><div class="no">Piece 5</div><h5>The mean for all queries</h5><p>Calculate AP for each query, then calculate the mean. In plain English: <b>for a typical query, how clean the list is at each relevant document.</b></p><div class="val">3 queries with AP 0.54, 0.80, 0.20 → MAP = 0.51</div></div></div></div><div class="together"><b>How the pieces come together.</b> Go down the list. At each relevant document, write the precision so far (pieces 1 and 2). Add these values (piece 3). Divide by the number of relevant documents that exist, so that missed documents count as 0 (piece 4). For a set of queries, take the mean (piece 5).</div></div></details>
+    <div class="panel"><div class="tbl" id="tblAP"></div></div>
+  </div>
+
+  <div class="metric" id="m-dcg">
+    <h3>DCG (Discounted Cumulative Gain)</h3>
+    <dl class="reader">
+      <dt>Simulated user</dt><dd>Reads down the list. The attention of the user decreases slowly at each rank.</dd>
+      <dt>Question</dt><dd>How much useful content did the user get? Higher grades give more value, and lower ranks give less.</dd>
+      <dt>Range</dt><dd>0 to IDCG. The maximum is different for each query. There is no fixed maximum.</dd>
+      <dt>Ignores</dt><dd>Documents after rank k.</dd>
+    </dl>
+    <div class="math tex"><i>DCG</i>@<i>k</i> = <span class="op"><small><i>k</i></small><big>Σ</big><small><i>i</i>=1</small></span> <span class="frac"><span><i>gain</i>(<i>rel<sub>i</sub></i>)</span><span>log<sub>2</sub>(<i>i</i> + 1)</span></span></div>
+    <details class="anatbox"><summary><span>Understand this formula, piece by piece</span><span class="cnt">7 pieces</span></summary><div class="inner"><div class="anat"><div class="piece"><div class="tx tex"><i>gain</i>(<i>rel</i><sub><i>i</i></sub>)</div><div><div class="no">Piece 1</div><h5>G for gain: the value of one document</h5><p>Start with one document. Its grade says how useful it is. The gain changes the grade into value points.</p><p>Linear gain: points = grade. Exponential gain: points = 2<sup>grade</sup> − 1. With exponential gain, a grade-3 document gives 7 points, not 3.</p><div class="val">List A, top 3: grades 3, 0, 2 → gains 3, 0, 2</div></div></div><div class="piece"><div class="tx tex"><span class="op"><small><i>k</i></small><big>Σ</big><small><i>i</i>=1</small></span> <i>gain</i>(<i>rel</i><sub><i>i</i></sub>)</div><div><div class="no">Piece 2</div><h5>C for cumulative: add the values</h5><p>Add the gains of the top k. The total is the <em>cumulative gain</em> (CG). In plain English: <b>how much useful content the top k contains.</b></p><p>The problem: CG does not see the order. A good document at rank 1 and the same document at rank 3 give the same total.</p><div class="val">List A (3, 0, 2): CG = 5 &nbsp;·&nbsp; List B (0, 2, 3): CG = 5. The same value, but list A is better for the user.</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>1</span><span>log<sub>2</sub>(<i>i</i> + 1)</span></span></div><div><div class="no">Piece 3</div><h5>D for discounted: less value at lower ranks</h5><p>To make the order count, multiply each gain by a <em>discount</em>, a number from 0 to 1. In plain English: <b>the fraction of attention that the user gives to rank i.</b> Rank 1 gets full attention.</p><div class="mt"><table><thead><tr><th>Rank</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>10</th></tr></thead><tbody><tr><td class="n">Discount</td><td class="n">1.00</td><td class="n">0.63</td><td class="n">0.50</td><td class="n">0.43</td><td class="n">0.39</td><td class="n">0.29</td></tr></tbody></table></div><div class="val">Rank 1: 1 ÷ 1 = 1.00 &nbsp;·&nbsp; Rank 2: 1 ÷ 1.585 = 0.63 &nbsp;·&nbsp; Rank 3: 1 ÷ 2 = 0.50</div></div></div><div class="piece"><div class="tx tex">log<sub>2</sub>(<i>i</i> + 1)</div><div><div class="no">Piece 4</div><h5>Why log<sub>2</sub>(i + 1)?</h5><p>log<sub>2</sub>(x) is the power of 2 that gives x. For example, log<sub>2</sub>(8) = 3, because 2 × 2 × 2 = 8. Thus, the divisor increases by 1 only when i + 1 doubles. The attention decreases fast at the first ranks and slowly after them.</p><p>The “+ 1” gives rank 1 the value log<sub>2</sub>(2) = 1. Thus, rank 1 has no discount.</p><div class="val">Rank 1 → 1 &nbsp;·&nbsp; Rank 3 → 2 &nbsp;·&nbsp; Rank 7 → 3 &nbsp;·&nbsp; Rank 15 → 4</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span><i>gain</i>(<i>rel</i><sub><i>i</i></sub>)</span><span>log<sub>2</sub>(<i>i</i> + 1)</span></span></div><div><div class="no">Piece 5</div><h5>Discounted gain: the value that the user gets from rank i</h5><p>The gain multiplied by the discount (the same as the gain divided by log<sub>2</sub>(i + 1)). In plain English: <b>a useful document gives less value when the user gives it less attention.</b></p><div class="val">List A: rank 1: 3 × 1.00 = 3.00 &nbsp;·&nbsp; rank 2: 0 × 0.63 = 0 &nbsp;·&nbsp; rank 3: 2 × 0.50 = 1.00</div></div></div><div class="piece"><div class="tx tex"><span class="op"><small><i>k</i></small><big>Σ</big><small><i>i</i>=1</small></span> <span class="frac"><span><i>gain</i>(<i>rel</i><sub><i>i</i></sub>)</span><span>log<sub>2</sub>(<i>i</i> + 1)</span></span></div><div><div class="no">Piece 6</div><h5>DCG: add the discounted gains</h5><p>Add the discounted gains of the top k. Now the order has an effect: the same three documents give different values in different orders. The table adds the values one rank at a time.</p><div class="mt"><table><thead><tr><th>Rank</th><th>A: grade</th><th>A: value</th><th>A: total</th><th>B: grade</th><th>B: value</th><th>B: total</th></tr></thead><tbody><tr><td class="n">1</td><td class="n">3</td><td class="n">3.00</td><td class="n">3.00</td><td class="n">0</td><td class="n">0</td><td class="n">0</td></tr><tr><td class="n">2</td><td class="n">0</td><td class="n">0</td><td class="n">3.00</td><td class="n">2</td><td class="n">1.26</td><td class="n">1.26</td></tr><tr><td class="n">3</td><td class="n">2</td><td class="n">1.00</td><td class="n"><b>4.00</b></td><td class="n">3</td><td class="n">1.50</td><td class="n"><b>2.76</b></td></tr></tbody></table></div><div class="val">List A: DCG@3 = 4.00 &nbsp;·&nbsp; List B: DCG@3 = 2.76. The order of list A is better, and DCG shows it.</div></div></div><div class="piece"><div class="tx tex">0 ≤ <i>DCG</i>@<i>k</i> ≤ ?</div><div><div class="no">Piece 7</div><h5>The limit of DCG: there is no fixed maximum</h5><p>The maximum DCG depends on the query: how many relevant documents it has, and their grades. Thus, a DCG value alone cannot tell you if a result is good or bad. nDCG, in the next section, solves this problem.</p><div class="val">One grade-3 document: maximum DCG@10 = 3.0 &nbsp;·&nbsp; Ten grade-3 documents: maximum DCG@10 = 13.6</div></div></div></div><div class="together"><b>How the pieces come together.</b> The name has three ideas, and each idea adds one step. <b>G</b>: give each document a value from its grade (piece 1). <b>C</b>: add the values (piece 2). <b>D</b>: before you add, make the value smaller at lower ranks, because the user gives them less attention (pieces 3 to 5). The result is DCG@k: the total value that the user gets from the top k, with more weight at the top (piece 6). It has no fixed maximum (piece 7).</div></div></details>
+    <div class="controls">
+      <button class="btn" data-gain="linear" aria-pressed="true">Linear gain: gain = rel</button>
+      <button class="btn" data-gain="exp" aria-pressed="false">Exponential gain: gain = 2<sup>rel</sup> − 1</button>
+    </div>
+    <div class="panel"><div id="svgDisc"></div></div>
+    <p>The discount curve is the attention of the user. At rank 1 the attention is 1. At rank 10 it is 0.29. With 1/rank (the MRR user), it is only 0.10 at rank 10. Thus, the DCG user reads a full page. The MRR user stops early.</p>
+    <div class="panel"><div id="svgContrib"></div><div class="work" id="workDCG"></div></div>
+    <div class="insight"><b class="tag">Why is there no good DCG value?</b> Query A has one relevant document of grade 3. Its maximum DCG@10 is 3. Query B has ten relevant documents of grade 3. Its maximum DCG@10 is 13.6. A DCG of 5 is not possible for query A, and it is a poor value for query B. Thus, a DCG value alone has no meaning. Always use nDCG.</div>
+  </div>
+
+  <div class="metric" id="m-ndcg">
+    <h3>nDCG (normalized DCG)</h3>
+    <dl class="reader">
+      <dt>Simulated user</dt><dd>The DCG user, compared with the same user on a perfect list.</dd>
+      <dt>Question</dt><dd>What fraction of the best possible useful content did the user get?</dd>
+      <dt>Range</dt><dd>0 to 1 for each query. The value 1 means the top k is in the ideal order.</dd>
+      <dt>Ignores</dt><dd>Documents after rank k. Unjudged documents.</dd>
+    </dl>
+    <div class="math tex"><i>nDCG</i>@<i>k</i> = <span class="frac"><span><i>DCG</i>@<i>k</i> of your list</span><span><i>DCG</i>@<i>k</i> of the ideal list</span></span></div>
+    <details class="anatbox"><summary><span>Understand this formula, piece by piece</span><span class="cnt">7 pieces</span></summary><div class="inner"><div class="anat"><div class="piece"><div class="tx tex"><i>DCG</i>@<i>k</i> = 4.00 → ?</div><div><div class="no">Piece 1</div><h5>The problem: is DCG = 4.00 good?</h5><p>For a query with only one relevant document of grade 3, DCG@3 = 4.00 is not possible, because the maximum is 3. For a query with many relevant documents, 4.00 can be poor. To read the value, compare it with the best possible value for the <b>same</b> query.</p><div class="val">Example: list A (grades 3, 0, 2) gives DCG@3 = 4.00</div></div></div><div class="piece"><div class="tx tex">ideal list</div><div><div class="no">Piece 2</div><h5>Build the ideal list</h5><p>Do these three steps:</p><ol style="margin:.3rem 0;padding-left:1.3em"><li>Take all relevant documents for the query from the qrels. Include the documents that the system did not return.</li><li>Sort them from the highest grade to the lowest grade.</li><li>Keep the first k.</li></ol><p>In plain English: <b>the best top k that any system could give for this query.</b></p><div class="val">qrels: grade 3 and grade 2 (both in list A), and grade 1 (missed) → ideal top 3: 3, 2, 1</div></div></div><div class="piece"><div class="tx tex"><i>IDCG</i>@<i>k</i> = <span class="op"><small><i>k</i></small><big>Σ</big><small><i>i</i>=1</small></span> <span class="frac"><span><i>gain</i>(<i>rel</i>*<sub><i>i</i></sub>)</span><span>log<sub>2</sub>(<i>i</i> + 1)</span></span></div><div><div class="no">Piece 3</div><h5>IDCG: the DCG of the ideal list</h5><p>The same formula as DCG, but on the ideal list. rel*<sub>i</sub> is the grade at rank i of the ideal list. In plain English: <b>the maximum DCG for this query.</b></p><div class="mt"><table><thead><tr><th>Rank</th><th>Ideal grade</th><th>Discount</th><th>Value</th><th>Total</th></tr></thead><tbody><tr><td class="n">1</td><td class="n">3</td><td class="n">1.00</td><td class="n">3.00</td><td class="n">3.00</td></tr><tr><td class="n">2</td><td class="n">2</td><td class="n">0.63</td><td class="n">1.26</td><td class="n">4.26</td></tr><tr><td class="n">3</td><td class="n">1</td><td class="n">0.50</td><td class="n">0.50</td><td class="n"><b>4.76</b></td></tr></tbody></table></div><div class="val">IDCG@3 = 3.00 + 1.26 + 0.50 = 4.76</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span><i>DCG</i>@<i>k</i></span><span><i>IDCG</i>@<i>k</i></span></span></div><div><div class="no">Piece 4</div><h5>Divide your value by the best value</h5><p>In plain English: <b>the share of the best possible value that your list gives.</b> The result is always from 0 to 1. Thus, you can compare a query with one relevant document and a query with twenty.</p><div class="val">nDCG@3 = 4.00 ÷ 4.76 = 0.840</div></div></div><div class="piece"><div class="tx tex">1 − <i>nDCG</i> = order loss + finding loss</div><div><div class="no">Piece 5</div><h5>Where did the missing value go?</h5><p>nDCG loses value for two causes. <b>Order loss:</b> the relevant documents are in your top k, but in a wrong order. A better reranker can fix this. <b>Finding loss:</b> some relevant documents are not in your top k. A better retriever can fix this.</p><p>To separate the two, put your own top k in the best order, and calculate nDCG again.</p><div class="val">Your list in the best order (3, 2, 0): DCG = 4.26, nDCG = 0.895. Order loss = 0.895 − 0.840 = 0.055. Finding loss = 1 − 0.895 = 0.105, from the missed grade-1 document.</div></div></div><div class="piece"><div class="tx tex">0 &nbsp;…&nbsp; 1</div><div><div class="no">Piece 6</div><h5>Special values</h5><p><b>nDCG = 1:</b> the top k is in the ideal order. <b>nDCG = 0:</b> the top k contains no relevant document. <b>IDCG = 0:</b> the query has no relevant document in the qrels, so nDCG has no defined value. Libraries skip these queries or give them 0.</p><div class="val">Example list A: 0.840, between the two limits</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>1</span><span>|<i>Q</i>|</span></span><span class="op"><small>|<i>Q</i>|</small><big>Σ</big><small><i>q</i>=1</small></span></div><div><div class="no">Piece 7</div><h5>The mean for all queries</h5><p>Calculate nDCG for each query, then calculate the mean. This is the number in papers and leaderboards.</p><div class="val">3 queries with 0.84, 0.50, 0.30 → 0.55</div></div></div></div><div class="together"><b>How the pieces come together.</b> DCG alone has no scale (piece 1). Build the best possible list for the same query (piece 2) and calculate its DCG (piece 3). Divide your DCG by it to get a share from 0 to 1 (piece 4). The missing share tells you what to fix: the order (reranker) or the finding (retriever) (piece 5). For a set of queries, take the mean (piece 7).</div></div></details>
+    <div class="panel">
+      <div id="svgNDCG"></div>
+      <div class="gauge" style="margin-top:12px"><div class="big" id="bigNDCG"></div><div class="work" id="workNDCG" style="white-space:normal"></div></div>
+    </div>
+    <p>The ideal list contains all relevant documents in the qrels, in decreasing grade order. It includes the missed documents. Thus, nDCG sees both failures: a wrong order, and relevant documents that are not in the top k.</p>
+  </div>
+
+  <h3 id="m-pipeline">How the metrics fit a two-stage system</h3>
+  <p>Many retrieval systems have two stages: a retriever that finds candidates, and a reranker that sets their order. A common report uses one metric for each hand-off: Recall@k for the candidates, nDCG@k for the final order, and Success@k for what a user or an LLM sees. The diagram uses k = 40, 10, and 5 as examples. Use the values of k that fit your system.</p>
+  <div class="pipe" id="funnel"></div>
+</section>
+
+<!-- S4 -->
+<section class="layer" id="s4">
+  <div class="depth">Section 4 of 6</div>
+  <h2>The lowest and highest value of each metric</h2>
+  <p class="question">What numbers are possible, and when is the maximum not possible?</p>
+  <p>All metrics on this page, except DCG, give a value from 0 to 1. Many papers multiply the value by 100. Thus, 0.523 and 52.3 are the same result.</p>
+  <div class="tbl">
+  <table>
+    <thead><tr><th>Metric</th><th>The question</th><th>Lowest</th><th>Highest</th><th>The highest value is not possible when</th></tr></thead>
+    <tbody>
+      <tr><td>Success@k</td><td>Is there a relevant document in the top k?</td><td class="n">0</td><td class="n">1</td><td>A query has no judged relevant document</td></tr>
+      <tr><td>Recall@k</td><td>What fraction of the relevant documents is in the top k?</td><td class="n">0</td><td class="n">1</td><td><i>R</i> is more than <i>k</i> (maximum = <i>k</i>/<i>R</i>)</td></tr>
+      <tr><td>Precision@k</td><td>What fraction of the top k is relevant?</td><td class="n">0</td><td class="n">1</td><td><i>R</i> is less than <i>k</i> (maximum = <i>R</i>/<i>k</i>)</td></tr>
+      <tr><td>MRR@k</td><td>At which rank is the first relevant document?</td><td class="n">0</td><td class="n">1</td><td>A query has no judged relevant document</td></tr>
+      <tr><td>MAP</td><td>How early are all relevant documents?</td><td class="n">0</td><td class="n">1</td><td>The system cannot return all relevant documents</td></tr>
+      <tr><td>DCG@k</td><td>How much useful content is near the top?</td><td class="n">0</td><td>IDCG@k (different for each query)</td><td>Not applicable. There is no fixed maximum</td></tr>
+      <tr><td>nDCG@k</td><td>What fraction of the ideal top k did we get?</td><td class="n">0</td><td class="n">1</td><td>A query has no judged relevant document (value not defined)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>Relations that are always true</h3>
+  <p>Success@5 ≤ Success@10, because a larger k can only add documents. Recall@k ≤ Success@k for each query, because recall is more than 0 only when success is 1. Recall@10 ≤ Recall@40. If your results do not obey these relations, examine your evaluation code.</p>
+</section>
+
+<!-- S5 -->
+<section class="layer" id="s5">
+  <div class="depth">Section 5 of 6</div>
+  <h2>What is a good value?</h2>
+  <p class="question">Is nDCG@10 = 0.45 good or bad?</p>
+  <p>There is no universal good value. A number has a meaning only when you compare it with three references: a floor, a ceiling, and the difficulty of the dataset.</p>
+  <div class="two">
+    <div class="card"><h4>The floor</h4><p>A simple baseline on the same queries and qrels. BM25 is the usual floor. If your system is not better than BM25, it is not good, at any value.</p></div>
+    <div class="card"><h4>The ceiling</h4><p>The best possible value. For nDCG this is 1 in theory. For a reranker, the ceiling is the value of a perfect order of the candidates that the retriever gave.</p></div>
+  </div>
+  <h3>The dataset has more effect than the system</h3>
+  <p>The chart shows nDCG@10 for two systems on 14 BEIR datasets. BM25 gets 0.149 on SCIDOCS and 0.789 on Quora. The system is the same. Only the dataset changes. Thus, 0.40 can be a good value on one dataset and a bad value on another dataset.</p>
+  <div class="panel"><div id="svgDumb"></div></div>
+  <p class="sub">Data: BM25 and SPLADE-v3 results from “A Systematic Multi-Domain Evaluation of Document Retrievers” (arXiv 2609.29455). Note that SPLADE-v3 is better on 13 datasets, but worse on Touché-2020.</p>
+
+  <h3 id="refs">Reference values from public benchmarks</h3>
+  <p>Use these values only to get a feeling for the scale. Your own floor on your own data is more important.</p>
+  <div class="tbl">
+  <table>
+    <thead><tr><th>Benchmark</th><th>Metric</th><th>Floor (BM25)</th><th>Stronger systems</th><th>What the numbers teach</th></tr></thead>
+    <tbody>
+      <tr><td>BEIR, average</td><td>nDCG@10</td><td class="n">≈ 0.43–0.44</td><td>Higher on most datasets, not on all</td><td>An average hides a large range per dataset</td></tr>
+      <tr><td>TREC DL 2019</td><td>nDCG@10</td><td class="n">0.455</td><td class="n">Perfect reranking of the BM25 top 1000: 0.955</td><td>Finding failures make the ceiling less than 1</td></tr>
+      <tr><td>MS MARCO dev</td><td>MRR@10</td><td class="n">0.187</td><td class="n">MiniLM-L6 cross-encoder: 0.390</td><td>Most queries have about one judged relevant passage, so values are low</td></tr>
+      <tr><td>LoTTE search</td><td>Success@5</td><td class="n">0.678</td><td class="n">ColBERTv2: 0.720; Jina-ColBERT-v2: 0.764</td><td>Success values are much higher than nDCG values</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">Sources: BEIR paper and follow-up reports; Sentence-Transformers model cards; ColBERTv2 and Jina-ColBERT-v2 papers.</p>
+
+  <h3 id="judge">The procedure to judge a value</h3>
+  <ol class="steps">
+    <li>Run BM25 on the same corpus, queries, and qrels. Record the same metrics that you report for your system. This is the floor.</li>
+    <li>Calculate the ceiling of your reranker. Put the relevant documents of the candidates (for example, the top 40) in the ideal order. Then calculate nDCG@10 for this list.</li>
+    <li>Calculate the fraction of the gap that your system closes: (system − floor) ÷ (ceiling − floor).</li>
+    <li>Find the queries with Success@10 = 0. Read 20 of these queries and their results. Find the cause of each failure.</li>
+    <li>Use the cost of a failure to make a decision. For RAG with 5 passages, 1 − Success@5 is the fraction of answers with no relevant context.</li>
+    <li>Make sure that a difference between two systems is real. Use a paired test on the values for each query, for example a paired t-test or a bootstrap. A small set of queries gives a large noise.</li>
+  </ol>
+  <div class="math tex"><i>gap closed</i> = <span class="frac"><span><i>system</i> − <i>floor</i></span><span><i>ceiling</i> − <i>floor</i></span></span></div>
+  <details class="anatbox"><summary><span>Understand this formula, piece by piece</span><span class="cnt">3 pieces</span></summary><div class="inner"><div class="anat"><div class="piece"><div class="tx tex"><i>system</i> − <i>floor</i></div><div><div class="no">Piece 1</div><h5>Your improvement</h5><p>How much better your system is than the simple baseline.</p><div class="val">Floor (BM25) 0.45, system 0.70: 0.70 − 0.45 = 0.25</div></div></div><div class="piece"><div class="tx tex"><i>ceiling</i> − <i>floor</i></div><div><div class="no">Piece 2</div><h5>The room for improvement</h5><p>The distance from the baseline to the best possible value on the same data.</p><div class="val">Ceiling 0.95: 0.95 − 0.45 = 0.50</div></div></div><div class="piece"><div class="tx tex"><span class="frac"><span>improvement</span><span>room</span></span></div><div><div class="no">Piece 3</div><h5>The share of the room that you used</h5><p>In plain English: <b>how much of the possible improvement your system got.</b> 0 means no better than the floor. 1 means as good as the ceiling.</p><div class="val">0.25 ÷ 0.50 = 0.50: your system closes half of the gap</div></div></div></div><div class="together"><b>How the pieces come together.</b> Measure your improvement over the floor (piece 1) and the room that exists (piece 2). Their ratio (piece 3) is easier to compare across datasets than the raw value, because it removes the effect of an easy or a difficult dataset.</div></div></details>
+</section>
+
+<!-- S6 -->
+<section class="layer" id="s6">
+  <div class="depth">Section 6 of 6 (center)</div>
+  <h2>Read a benchmark result</h2>
+  <p class="question">What does a set of results say?</p>
+  <p>This tool uses four common metrics: nDCG@10, Success@5, Success@10, and Recall@40. Type a set of results. You can use values from 0 to 1 or from 0 to 100. If you have BM25 results on the same data, type them in the second row. The text below then explains each number and compares the two systems.</p>
+  <div class="panel">
+    <div class="sub" style="margin-bottom:6px">System</div>
+    <div class="form" id="formSys">
+      <label>nDCG@10<input inputmode="decimal" data-k="n10" value="0.52"></label>
+      <label>Success@5<input inputmode="decimal" data-k="s5" value="0.71"></label>
+      <label>Success@10<input inputmode="decimal" data-k="s10" value="0.80"></label>
+      <label>Recall@40<input inputmode="decimal" data-k="r40" value="0.86"></label>
+    </div>
+    <div class="sub" style="margin:14px 0 6px">Floor, for example BM25 (optional)</div>
+    <div class="form" id="formBase">
+      <label>nDCG@10<input inputmode="decimal" data-k="n10" value=""></label>
+      <label>Success@5<input inputmode="decimal" data-k="s5" value=""></label>
+      <label>Success@10<input inputmode="decimal" data-k="s10" value=""></label>
+      <label>Recall@40<input inputmode="decimal" data-k="r40" value=""></label>
+    </div>
+  </div>
+  <div class="panel out" id="readOut" aria-live="polite"></div>
+</section>
+
+</main>
+<footer class="wrap">All values in sections 2 and 3 come from the lists on this page. Binary metrics count a grade more than 0 as relevant. Reference values come from the sources named in section 5.</footer>
+
+<script>
+(function(){
+const N=40;
+let grades=new Array(N).fill(0);
+let missed=[];
+let gainMode='linear';
+const $=id=>document.getElementById(id);
+const f=(x,d=3)=>x.toFixed(d);
+const pct=x=>Math.round(x*100)+'%';
+
+const PRESETS={
+  mixed:{label:'Typical result',g:{2:3,4:1,7:2,15:2,31:1},m:[1]},
+  great:{label:'Good ranking',g:{1:3,2:3,3:2,4:2,5:1,7:1},m:[]},
+  buried:{label:'Relevant documents low in the list',g:{12:3,18:2,25:2,33:1},m:[]},
+  lucky:{label:'One relevant document only',g:{1:3},m:[3,2,2]},
+  inverted:{label:'Correct documents, wrong order',g:{1:1,2:1,3:1,4:2,5:2,6:3},m:[]},
+  clear:{label:'Set all grades to 0',g:{},m:[]}
+};
+function load(name){grades=new Array(N).fill(0);const p=PRESETS[name];for(const r in p.g)grades[r-1]=p.g[r];missed=p.m.slice();render();}
+
+const isRel=g=>g>0;
+const R=()=>grades.filter(isRel).length+missed.length;
+function hitsAt(k){let c=0;for(let i=0;i<k;i++)if(grades[i]>0)c++;return c;}
+const success=k=>hitsAt(k)>0?1:0;
+const recall=k=>{const r=R();return r?hitsAt(k)/r:0;};
+const precision=k=>hitsAt(k)/k;
+function firstRank(){const i=grades.findIndex(isRel);return i<0?null:i+1;}
+function ap(){const r=R();if(!r)return 0;let s=0,c=0;for(let i=0;i<N;i++){if(grades[i]>0){c++;s+=c/(i+1);}}return s/r;}
+const gain=g=>gainMode==='linear'?g:Math.pow(2,g)-1;
+const disc=i=>1/Math.log2(i+1);
+function dcg(arr,k){let s=0;for(let i=0;i<Math.min(k,arr.length);i++)s+=gain(arr[i])*disc(i+1);return s;}
+const idealList=()=>grades.filter(isRel).concat(missed).sort((a,b)=>b-a);
+function ndcg(k){const id=dcg(idealList(),k);return id?dcg(grades,k)/id:0;}
+
+/* onion */
+const SECTIONS=[['s1','Two failures'],['s2','One relevant document'],['s3','Many relevant documents'],['s4','Lowest and highest values'],['s5','What is a good value?'],['s6','Read a benchmark result']];
+function drawOnion(){
+  const cx=150,cy=165;let s=`<svg class="onion" viewBox="0 0 460 330" role="group" aria-label="Sections of this page">`;
+  const fills=['var(--g0)','var(--g1)','color-mix(in srgb,var(--g1) 50%,var(--g2))','var(--g2)','color-mix(in srgb,var(--g2) 50%,var(--g3))','var(--g3)'];
+  SECTIONS.forEach(([id,name],i)=>{const r=150-i*24;s+=`<g class="ring" tabindex="0" role="button" aria-label="Go to section ${i+1}: ${name}" data-go="${id}"><circle cx="${cx}" cy="${cy}" r="${r}" style="fill:${fills[i]}"/></g>`;});
+  SECTIONS.forEach(([id,name],i)=>{
+    const r=150-i*24,a=-Math.PI/2+(i-2.5)*0.33,ax=cx+(r-12)*Math.cos(a),ay=cy+(r-12)*Math.sin(a),ly=40+i*50;
+    s+=`<path d="M${ax.toFixed(1)} ${ay.toFixed(1)} L310 ${ly}" style="stroke:var(--muted);stroke-width:1"/><circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="3" style="fill:var(--ink)"/>`;
+    s+=`<text x="316" y="${ly+4}" style="font-size:14px;font-weight:${i===5?700:500};cursor:pointer" data-go="${id}">${name}</text>`;
+  });
+  s+=`<text x="${cx}" y="${cy+5}" text-anchor="middle" class="t3" style="font-weight:700;font-size:14px;pointer-events:none">center</text></svg>`;
+  $('onion').innerHTML=s;
+  $('onion').querySelectorAll('[data-go]').forEach(el=>{
+    const go=()=>{const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;$(el.dataset.go).scrollIntoView({behavior:reduce?'auto':'smooth'});};
+    el.addEventListener('click',go);
+    el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+  });
+}
+
+/* S1: two failures */
+function svgFail(){
+  const cw=46,x0=40;let s=`<svg viewBox="0 0 640 230" role="img" aria-label="A ranked list with a user stop line, an ordering failure below the line, and a finding failure outside the list">`;
+  const list=[0,2,0,0,0,3,0,0];
+  s+=`<text x="${x0}" y="16" class="lbl">ranked list</text>`;
+  list.forEach((g,i)=>{const x=x0+i*(cw+8);s+=`<rect x="${x}" y="28" width="${cw}" height="${cw}" rx="7" class="c${g}"/><text x="${x+cw/2}" y="${28+cw/2+5}" text-anchor="middle" class="t${g} strong">${i+1}</text>`;});
+  const stopX=x0+4*(cw+8)-4;
+  s+=`<line x1="${stopX}" x2="${stopX}" y1="20" y2="90" style="stroke:var(--bad);stroke-width:3"/><text x="${stopX-6}" y="104" text-anchor="end" style="fill:var(--bad);font-weight:700">the user stops here</text>`;
+  const ox=x0+5*(cw+8)+cw/2;
+  s+=`<path d="M${ox} 78 V130" style="stroke:var(--ideal);stroke-width:2"/><text x="${ox}" y="148" text-anchor="middle" class="strong">ordering failure</text><text x="${ox}" y="166" text-anchor="middle" class="lbl">relevant, but below the stop point</text>`;
+  const fx=520;
+  s+=`<rect x="${fx}" y="28" width="${cw}" height="${cw}" rx="7" class="c3" style="stroke:var(--bad);stroke-width:2;stroke-dasharray:4 3"/><text x="${fx+cw/2}" y="${28+cw/2+5}" text-anchor="middle" class="t3 strong">?</text>`;
+  s+=`<text x="${fx+cw/2}" y="104" text-anchor="middle" class="strong">finding failure</text><text x="${fx+cw/2}" y="122" text-anchor="middle" class="lbl">relevant, but not</text><text x="${fx+cw/2}" y="138" text-anchor="middle" class="lbl">in the list</text>`;
+  s+=`<text x="${x0}" y="205" class="lbl">A good list puts the relevant documents to the left of the red line.</text></svg>`;
+  $('svgFail').innerHTML=s;
+}
+
+/* S2: one relevant document */
+function oneMetrics(r){return{s5:r<=5?1:0,s10:r<=10?1:0,r40:r<=40?1:0,rr:r<=10?1/r:0,nd:r<=10?1/Math.log2(r+1):0,p10:r<=10?0.1:0};}
+function renderOne(){
+  const r=+$('rankSlider').value;$('rankVal').textContent=r>40?`${r} (not in the top 40)`:r;
+  const m=oneMetrics(r);
+  const rows=[['Success@5',m.s5,'step'],['Success@10',m.s10,'step'],['Recall@40',m.r40,'step'],['RR@10',m.rr,'curve'],['nDCG@10',m.nd,'curve'],['Precision@10',m.p10,'step']];
+  $('oneBars').innerHTML=rows.map(([n,v,k])=>`<div>${n}<span class="kind">${k}</span></div><div class="track" role="img" aria-label="${n} ${f(v,2)}"><div class="fill ${k==='step'?'step':''}" style="width:${v*100}%"></div></div><div class="v">${f(v,2)}</div>`).join('');
+  let say;
+  if(r<=5) say=`The document is at rank ${r}. A user who reads 5 results finds it. nDCG@10 is ${f(m.nd,2)}, because the document is ${r===1?'at the top':'not at the top'}.`;
+  else if(r<=10) say=`The document is at rank ${r}. A user who reads 5 results does not find it, but a user who reads 10 results finds it. nDCG@10 is only ${f(m.nd,2)}.`;
+  else if(r<=40) say=`The document is at rank ${r}. The user does not see it in the top 10, so nDCG@10 and RR@10 are 0. But the document is in the top 40. A reranker can move it up.`;
+  else say=`The document is at rank ${r}, which is not in the top 40. This is a finding failure. A reranker that uses the top 40 cannot correct it. All metrics are 0.`;
+  if(r<=10) say+=` Precision@10 is 0.10, because the query has only one relevant document. This is the maximum for this query.`;
+  $('oneSay').textContent=say;
+  // strip svg
+  const cw=11.6,gap=1;let s=`<svg viewBox="0 0 640 74" role="img" aria-label="Ranks 1 to 50 with the relevant document marked">`;
+  for(let i=1;i<=50;i++){const x=10+(i-1)*(cw+gap);s+=`<rect x="${x}" y="22" width="${cw}" height="24" rx="2" class="${i===r?'c3':'c0'}" style="${i>40?'opacity:.45':''}"/>`;}
+  [5,10,40].forEach(k=>{const x=10+k*(cw+gap)-gap/2;s+=`<line x1="${x}" x2="${x}" y1="14" y2="54" style="stroke:var(--ideal);stroke-width:2"/><text x="${x}" y="68" text-anchor="middle" class="lbl">${k}</text>`;});
+  s+=`<text x="10" y="12" class="lbl">ranks 1 to 50 (ranks after 40 are not retrieved)</text></svg>`;
+  $('svgOne').innerHTML=s;
+}
+function tblOne(){
+  const ranks=[1,2,3,4,5,6,10,11,40,41];
+  let h=`<table><thead><tr><th>Rank of the document</th><th>Success@5</th><th>Success@10</th><th>Recall@40</th><th>RR@10</th><th>nDCG@10</th></tr></thead><tbody>`;
+  ranks.forEach(r=>{const m=oneMetrics(r);h+=`<tr><td class="n">${r}</td><td class="n">${m.s5}</td><td class="n">${m.s10}</td><td class="n">${m.r40}</td><td class="n">${f(m.rr,2)}</td><td class="n">${f(m.nd,2)}</td></tr>`;});
+  $('tblOne').innerHTML=h+`</tbody></table>`;
+}
+
+/* S3: board */
+function cycle(i){grades[i]=(grades[i]+1)%4;render();}
+function renderBoard(){
+  let h='';
+  for(let row=0;row<4;row++){
+    h+=`<div class="rowlab">${row*10+1}–${row*10+10}</div>`;
+    for(let c=0;c<10;c++){const i=row*10+c,g=grades[i];h+=`<button class="bg${g} ${i<5?'top5':i<10?'top10':''}" data-i="${i}" aria-label="Rank ${i+1}, grade ${g}. Click to change the grade.">${i+1}<small>${g?'g'+g:''}</small></button>`;}
+  }
+  $('board').innerHTML=h;
+  let m='';for(let i=0;i<N;i++)m+=`<button class="bg${grades[i]} ${i===4||i===9?'cut':''}" data-i="${i}" aria-label="Rank ${i+1}, grade ${grades[i]}" title="Rank ${i+1}, grade ${grades[i]}"></button>`;
+  $('mini').innerHTML=m;
+  const kp=[['nDCG@10',f(ndcg(10))],['Success@5',success(5)],['Success@10',success(10)],['Recall@40',f(recall(40))]];
+  $('kpis').innerHTML=kp.map(([a,b])=>`<div class="kpi"><b>${b}</b><span>${a}</span></div>`).join('');
+  $('missed').innerHTML=missed.length?missed.map((g,j)=>`<button class="chip bg${g}" data-rm="${j}" aria-label="Remove the missed grade-${g} document">grade ${g}</button>`).join(''):`<span class="empty">None. All relevant documents are in the top 40.</span>`;
+  $('rnow').textContent=`R = ${R()} (${grades.filter(isRel).length} in the list, ${missed.length} not returned)`;
+}
+function svgSuccess(){
+  const cw=52,gap=8,x0=10;let s=`<svg viewBox="0 0 640 175" role="img" aria-label="Top 10 results with the Success@5 and Success@10 ranges">`;
+  for(let i=0;i<10;i++){const x=x0+i*(cw+gap),g=grades[i];s+=`<rect x="${x}" y="32" width="${cw}" height="${cw}" rx="7" class="c${g}"/><text x="${x+cw/2}" y="${32+cw/2+5}" text-anchor="middle" class="t${g} strong">${i+1}</text>`;}
+  const fr=firstRank();
+  if(fr&&fr<=10){const x=x0+(fr-1)*(cw+gap)+cw/2;s+=`<text x="${x}" y="16" text-anchor="middle" class="strong" style="fill:var(--ideal)">first relevant</text><path d="M${x} 20 V29" style="stroke:var(--ideal);stroke-width:2"/>`;}
+  const br=(k,y)=>{const x2=x0+k*(cw+gap)-gap,ok=success(k);return `<path d="M${x0} ${y-8} V${y} H${x2} V${y-8}" class="brk ${ok?'ok':'no'}"/><text x="${x0}" y="${y+18}" class="${ok?'okt':'not'}">Success@${k} = ${ok}: ${ok?'the user finds a relevant document':'the user finds nothing'}</text>`;};
+  s+=br(5,104)+br(10,146)+`</svg>`;
+  $('svgSuccess').innerHTML=s;
+}
+function svgRecall(){
+  const W=640,H=300,L=44,Rm=18,T=24,B=52,x=k=>L+(k-1)/(N-1)*(W-L-Rm),y=v=>T+(1-v)*(H-T-B);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Recall and precision as k increases from 1 to 40">`;
+  [0,.25,.5,.75,1].forEach(v=>{s+=`<line x1="${L}" x2="${W-Rm}" y1="${y(v)}" y2="${y(v)}" class="${v?'grid':'axis'}"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" class="lbl">${v}</text>`;});
+  [1,5,10,20,30,40].forEach(k=>{s+=`<text x="${x(k)}" y="${H-B+34}" text-anchor="middle" class="lbl">${k}</text>`;});
+  s+=`<text x="${W-Rm}" y="${H-4}" text-anchor="end" class="lbl">k (number of top results)</text>`;
+  [5,10,40].forEach(k=>{s+=`<line x1="${x(k)}" x2="${x(k)}" y1="${T}" y2="${y(0)}" style="stroke:var(--ideal);stroke-width:1.5;stroke-dasharray:4 3"/>`;});
+  let pr='',pp='';for(let k=1;k<=N;k++){pr+=(k===1?'M':'L')+x(k).toFixed(1)+' '+y(recall(k)).toFixed(1);pp+=(k===1?'M':'L')+x(k).toFixed(1)+' '+y(precision(k)).toFixed(1);}
+  s+=`<path d="${pp}" class="ln-mut"/><path d="${pr}" class="ln-acc"/>`;
+  [5,10,40].forEach(k=>{const v=recall(k),xx=x(k),yy=y(v);s+=`<circle cx="${xx}" cy="${yy}" r="5" class="dot-acc"/><text x="${k===40?xx-8:xx+8}" y="${Math.max(yy-8,T+10)}" text-anchor="${k===40?'end':'start'}" class="strong">R@${k} ${f(v,2)}</text>`;});
+  for(let i=0;i<N;i++)if(grades[i]>0)s+=`<rect x="${x(i+1)-4}" y="${y(0)+6}" width="8" height="12" rx="2" class="c${grades[i]}"/>`;
+  s+=`<g transform="translate(${L+10},${T-8})"><line x1="0" x2="22" y1="0" y2="0" class="ln-acc"/><text x="28" y="4">Recall@k</text><line x1="110" x2="132" y1="0" y2="0" class="ln-mut"/><text x="138" y="4">Precision@k</text><text x="250" y="4" class="lbl">marks at the bottom show relevant ranks</text></g></svg>`;
+  $('svgRecall').innerHTML=s;
+  const r=R();$('workRecall').innerHTML=[5,10,40].map(k=>`Recall@${k} = <b>${hitsAt(k)}/${r}</b> = <b>${f(recall(k))}</b> &nbsp; Precision@${k} = <b>${hitsAt(k)}/${k}</b> = <b>${f(precision(k))}</b>`).join('<br>');
+}
+function svgRR(){
+  const W=640,H=230,L=40,T=26,B=36,n=20,bw=(W-L-10)/n,y=v=>T+(1-v)*(H-T-B),fr=firstRank();
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reciprocal rank value for each rank">`;
+  [0,.5,1].forEach(v=>{s+=`<line x1="${L}" x2="${W-10}" y1="${y(v)}" y2="${y(v)}" class="${v?'grid':'axis'}"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" class="lbl">${v}</text>`;});
+  for(let r=1;r<=n;r++){const v=1/r,x=L+(r-1)*bw+3,hit=fr===r;
+    s+=`<rect x="${x}" y="${y(v)}" width="${bw-6}" height="${y(0)-y(v)}" rx="3" style="fill:${hit?'var(--ideal)':'var(--g1)'}"/>`;
+    if(r<=5||r%5===0||hit)s+=`<text x="${x+(bw-6)/2}" y="${H-B+18}" text-anchor="middle" class="lbl">${r}</text>`;
+    if(hit)s+=`<text x="${x+(bw-6)/2}" y="${y(v)-8}" text-anchor="middle" class="strong">1/${r} = ${f(v,2)}</text>`;}
+  s+=`<text x="${W-10}" y="${H-2}" text-anchor="end" class="lbl">rank of the first relevant document</text></svg>`;
+  $('svgRR').innerHTML=s;
+  $('workRR').innerHTML=fr?`The first relevant document is at rank <b>${fr}</b>. Thus, RR = 1/${fr} = <b>${f(1/fr)}</b>.${fr>10?' RR@10 is 0 for this query, because the rank is more than 10.':''}`:`The list contains no relevant document. Thus, RR = <b>0</b>.`;
+}
+function tblAP(){
+  const r=R();let rows='',c=0,s=0;
+  for(let i=0;i<N;i++)if(grades[i]>0){c++;const p=c/(i+1);s+=p;rows+=`<tr><td class="n">${i+1}</td><td class="n">${grades[i]}</td><td class="n">${c}</td><td class="n">${c}/${i+1} = ${f(p)}</td></tr>`;}
+  missed.forEach(g=>{rows+=`<tr><td>not returned</td><td class="n">${g}</td><td>–</td><td class="n">0</td></tr>`;});
+  if(!rows)rows=`<tr><td colspan="4">There are no relevant documents. Add documents to the list.</td></tr>`;
+  $('tblAP').innerHTML=`<table><thead><tr><th>Rank</th><th>Grade</th><th>Relevant documents so far</th><th>Precision at this rank</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="3">AP = sum ÷ R = ${f(s)} ÷ ${r}</td><td class="n">${f(ap())}</td></tr></tfoot></table>`;
+}
+function svgDisc(){
+  const W=640,H=250,L=44,Rm=18,T=26,B=40,x=k=>L+(k-1)/(N-1)*(W-L-Rm),y=v=>T+(1-v)*(H-T-B);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Attention of the DCG user compared with the MRR user">`;
+  s+=`<rect x="${x(1)}" y="${T}" width="${x(10)-x(1)}" height="${y(0)-T}" class="shade"/><text x="${x(10)-6}" y="${T+16}" text-anchor="end" class="lbl">top 10</text>`;
+  [0,.5,1].forEach(v=>{s+=`<line x1="${L}" x2="${W-Rm}" y1="${y(v)}" y2="${y(v)}" class="${v?'grid':'axis'}"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" class="lbl">${v}</text>`;});
+  [1,5,10,20,30,40].forEach(k=>{s+=`<text x="${x(k)}" y="${H-B+20}" text-anchor="middle" class="lbl">${k}</text>`;});
+  s+=`<text x="${W-Rm}" y="${H-2}" text-anchor="end" class="lbl">rank</text>`;
+  let a='',b='';for(let k=1;k<=N;k++){a+=(k===1?'M':'L')+x(k).toFixed(1)+' '+y(disc(k)).toFixed(1);b+=(k===1?'M':'L')+x(k).toFixed(1)+' '+y(1/k).toFixed(1);}
+  s+=`<path d="${b}" class="ln-mut"/><path d="${a}" class="ln-acc"/>`;
+  [2,3,10,40].forEach(k=>{const v=disc(k);s+=`<circle cx="${x(k)}" cy="${y(v)}" r="4" class="dot-acc"/><text x="${k===40?x(k)-6:x(k)+6}" y="${y(v)-8}" text-anchor="${k===40?'end':'start'}" class="strong">${f(v,2)}</text>`;});
+  s+=`<circle cx="${x(10)}" cy="${y(.1)}" r="4" style="fill:var(--muted)"/><text x="${x(10)+6}" y="${y(.1)+16}" class="lbl">0.10</text>`;
+  s+=`<g transform="translate(${W-270},${T+40})"><line x1="0" x2="22" y1="0" y2="0" class="ln-acc"/><text x="28" y="4">DCG user: 1 / log₂(rank + 1)</text><line x1="0" x2="22" y1="22" y2="22" class="ln-mut"/><text x="28" y="26">MRR user: 1 / rank</text></g></svg>`;
+  $('svgDisc').innerHTML=s;
+}
+function svgContrib(){
+  const W=640,H=250,L=44,T=30,B=40,bw=(W-L-10)/10,maxG=gain(3),y=v=>T+(1-v/maxG)*(H-T-B);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gain and gain after the discount for each of the top 10 ranks">`;
+  s+=`<line x1="${L}" x2="${W-10}" y1="${y(0)}" y2="${y(0)}" class="axis"/>`;
+  [0,maxG].forEach(v=>{s+=`<text x="${L-8}" y="${y(v)+4}" text-anchor="end" class="lbl">${v}</text>`;});
+  for(let i=0;i<10;i++){const g=grades[i],G=gain(g),c=G*disc(i+1),x=L+i*bw+6,w=bw-12;
+    if(G>0){s+=`<rect x="${x}" y="${y(G)}" width="${w}" height="${y(0)-y(G)}" rx="4" class="outline"/><rect x="${x}" y="${y(c)}" width="${w}" height="${y(0)-y(c)}" rx="4" class="c${g}"/><text x="${x+w/2}" y="${y(G)-6}" text-anchor="middle" class="strong">${f(c,2)}</text>`;}
+    else s+=`<text x="${x+w/2}" y="${y(0)-6}" text-anchor="middle" class="lbl">0</text>`;
+    s+=`<text x="${x+w/2}" y="${H-B+18}" text-anchor="middle" class="lbl">${i+1}</text>`;}
+  s+=`<text x="${W-10}" y="${H-2}" text-anchor="end" class="lbl">rank</text><text x="${L}" y="14" class="lbl">gain (outline) and the value the user gets (filled)</text></svg>`;
+  $('svgContrib').innerHTML=s;
+  const terms=[];for(let i=0;i<10;i++)if(grades[i]>0)terms.push(`${gain(grades[i])}/${f(Math.log2(i+2))}`);
+  $('workDCG').innerHTML=`DCG@10 = ${terms.length?terms.join(' + '):'0'} = <b>${f(dcg(grades,10))}</b>`;
+}
+function svgNDCG(){
+  const W=640,cw=48,gap=6,x0=90,act=grades.slice(0,10),ide=idealList().slice(0,10);while(ide.length<10)ide.push(0);
+  const D=dcg(grades,10),I=dcg(idealList(),10),scale=(W-x0-20)/Math.max(I,D,1e-9);
+  let s=`<svg viewBox="0 0 ${W} 300" role="img" aria-label="Your top 10 compared with the ideal top 10">`;
+  const row=(arr,y,label)=>{let r=`<text x="${x0-10}" y="${y+cw/2+5}" text-anchor="end" class="strong">${label}</text>`;arr.forEach((g,i)=>{const x=x0+i*(cw+gap);r+=`<rect x="${x}" y="${y}" width="${cw}" height="${cw}" rx="6" class="c${g}"/><text x="${x+cw/2}" y="${y+cw/2+5}" text-anchor="middle" class="t${g}">${g}</text>`;});return r;};
+  s+=`<text x="${x0}" y="14" class="lbl">grade at ranks 1 to 10</text>`+row(act,22,'System')+row(ide,80,'Ideal');
+  const bar=(arr,y,label,val,ideal)=>{let x=x0,r=`<text x="${x0-10}" y="${y+21}" text-anchor="end" class="strong">${label}</text>`;arr.forEach((g,i)=>{const c=gain(g)*disc(i+1);if(c>0){const w=c*scale;r+=`<rect x="${x}" y="${y}" width="${w}" height="30" class="c${g} seg"/>`;x+=w;}});
+    r+=`<text x="${x0}" y="${y+50}" class="lbl">${ideal?'IDCG@10':'DCG@10'} = ${f(val)}</text>`;return r;};
+  s+=`<line x1="${x0+I*scale}" x2="${x0+I*scale}" y1="150" y2="262" style="stroke:var(--ideal);stroke-width:2;stroke-dasharray:4 3"/>`;
+  s+=bar(act,160,'System',D,false)+bar(ide,226,'Ideal',I,true)+`</svg>`;
+  $('svgNDCG').innerHTML=s;$('bigNDCG').textContent=f(ndcg(10));
+  $('workNDCG').innerHTML=I?`nDCG@10 = DCG@10 ÷ IDCG@10 = <b>${f(D)}</b> ÷ <b>${f(I)}</b>. The user got ${pct(D/I)} of the best possible value.${missed.length?` The ideal list includes ${missed.length} document${missed.length>1?'s':''} that the system did not return.`:''}`:`There are no relevant documents. Thus, IDCG = 0 and nDCG has no defined value. This page shows 0.`;
+}
+function funnel(){
+  const fr=firstRank(),r=R(),h40=hitsAt(40),low=grades.slice(10).filter(isRel).length;
+  const cell=(g,extra='',lbl='')=>`<span class="bg${g} ${extra}" title="${lbl}">${lbl.startsWith('Rank')?'':''}</span>`;
+  const rel=[];grades.forEach((g,i)=>{if(g>0)rel.push({g,rank:i+1});});missed.forEach(g=>rel.push({g,rank:null}));rel.sort((a,b)=>b.g-a.g);
+  const chips=rel.length?rel.map(d=>`<span class="chipd bg${d.g} ${d.rank?'':'miss'}">grade ${d.g}<small>${d.rank?'rank '+d.rank:'not returned'}</small></span>`).join(''):'<span class="d">No relevant documents.</span>';
+  let c40='';for(let i=0;i<40;i++)c40+=`<span class="bg${grades[i]} ${i<10?'t10':''}" title="Rank ${i+1}, grade ${grades[i]}"></span>`;
+  const row=(arr,mark)=>arr.map((g,i)=>`<span class="bg${g} big ${mark&&fr===i+1?'first':''}" title="Rank ${i+1}, grade ${g}">${i+1}</span>`).join('');
+  const ide=idealList().slice(0,10);while(ide.length<10)ide.push(0);
+  const met=(name,val,q,fix,meter)=>`<div class="met-b"><div class="mq">${name}</div><div class="mv">${val}</div>${meter!=null?`<div class="meter"><i style="width:${Math.max(0,Math.min(1,meter))*100}%"></i></div>`:''}<div class="mq" style="margin-top:6px">${q}</div>${fix?`<div class="fix">${fix}</div>`:''}</div>`;
+  const ok=v=>v?'<span class="yes">Yes</span>':'<span class="nope">No</span>';
+  const flow=(what,loss)=>`<div class="flow"><span class="ar" aria-hidden="true">↓</span><span>${what}${loss?` <span class="${loss[0]}">${loss[1]}</span>`:''}</span></div>`;
+  const st=(n,title,desc,vis,metric)=>`<div class="stg"><div><div class="sn">Stage ${n}</div><h5>${title}</h5><div class="d">${desc}</div></div><div class="vis">${vis}</div>${metric}</div>`;
+  $('funnel').innerHTML=
+   st(0,'All relevant documents','People judged these documents as relevant in the qrels. This is what exists.',`<div class="chipsd">${chips}</div>`,met('R','R = '+r,'The number of relevant documents for this query.','',null))+
+   flow('The retriever searches the full corpus and keeps the top 40.',missed.length?['loss',`${missed.length} relevant document${missed.length>1?'s are':' is'} lost here: not in the top 40 (finding failure).`]:['keep','No relevant document is lost here.'])+
+   st(1,'Retriever: top 40','The candidates. Only these documents can go to the next stages.',`<div class="c40">${c40}</div><div class="d" style="margin-top:6px">${h40} of ${r} relevant documents are here. The first row is the top 10.</div>`,met('Recall@40',f(recall(40),2),'What share of the relevant documents is in the candidates?','If low: improve the retriever, or take more candidates.',recall(40)))+
+   flow('The reranker sorts the 40 candidates. The user sees only the top 10.',low?['loss',`${low} relevant document${low>1?'s stay':' stays'} below rank 10 (ordering failure).`]:['keep','No relevant candidate stays below rank 10.'])+
+   st(2,'Reranker: the order of the top 10','Your top 10 compared with the best possible top 10.',`<div class="rowl">System</div><div class="c10">${row(grades.slice(0,10),true)}</div><div class="rowl">Ideal</div><div class="c10">${row(ide,false)}</div>`,met('nDCG@10',f(ndcg(10),2),'How near is the top 10 to the best order?','If low but Recall@40 is high: improve the reranker.',ndcg(10)))+
+   flow('The user reads the top 10.',null)+
+   st(3,'The user sees the top 10','A search results page.',`<div class="c10">${row(grades.slice(0,10),true)}</div>${fr&&fr<=10?`<div class="d" style="margin-top:6px">The first relevant document is at rank ${fr} (ringed).</div>`:''}`,met('Success@10',ok(success(10)),'Is there at least one relevant document in the top 10?','',null))+
+   flow('Only the top 5 go into the LLM context.',fr&&fr>5&&fr<=10?['loss',`The first relevant document (rank ${fr}) does not reach the LLM.`]:null)+
+   st(4,'LLM context: top 5','The passages that a RAG system gives to the LLM.',`<div class="c10">${row(grades.slice(0,5),true)}</div>`,met('Success@5',ok(success(5)),'Does the LLM get at least one relevant document?','If No for many queries: the LLM must answer without evidence.',null));
+}
+
+/* S5: dumbbell */
+const BEIR=[['TREC-COVID',.595,.733],['NFCorpus',.322,.363],['NQ',.305,.586],['HotpotQA',.633,.693],['FiQA',.236,.381],['ArguAna',.397,.506],['Touché-2020',.442,.310],['CQADupStack',.302,.345],['Quora',.789,.814],['DBPedia',.318,.451],['SCIDOCS',.149,.157],['FEVER',.651,.806],['Climate-FEVER',.165,.250],['SciFact',.679,.716]];
+function svgDumb(){
+  const rows=BEIR.slice().sort((a,b)=>a[1]-b[1]),W=640,L=120,Rm=20,T=34,rh=26,H=T+rows.length*rh+30,x=v=>L+v*(W-L-Rm);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="nDCG@10 of BM25 and SPLADE-v3 on 14 BEIR datasets">`;
+  [0,.2,.4,.6,.8,1].forEach(v=>{s+=`<line x1="${x(v)}" x2="${x(v)}" y1="${T-6}" y2="${H-24}" class="grid"/><text x="${x(v)}" y="${H-8}" text-anchor="middle" class="lbl">${v}</text>`;});
+  s+=`<g transform="translate(${L},12)"><circle cx="6" cy="0" r="6" style="fill:var(--muted)"/><text x="16" y="4">BM25</text><circle cx="86" cy="0" r="6" class="dot-acc"/><text x="96" y="4">SPLADE-v3</text></g>`;
+  rows.forEach(([n,b,sp],i)=>{const y=T+i*rh+rh/2;
+    s+=`<text x="${L-10}" y="${y+4}" text-anchor="end">${n}</text><line x1="${x(b)}" x2="${x(sp)}" y1="${y}" y2="${y}" style="stroke:${sp<b?'var(--bad)':'var(--line)'};stroke-width:4"/><circle cx="${x(b)}" cy="${y}" r="6" style="fill:var(--muted)"/><circle cx="${x(sp)}" cy="${y}" r="6" class="dot-acc"/>`;
+    s+=`<text x="${x(Math.max(b,sp))+12}" y="${y+4}" class="lbl">${f(b,2)} → ${f(sp,2)}</text>`;});
+  s+=`</svg>`;$('svgDumb').innerHTML=s;
+}
+
+/* S6: reader */
+function readForm(id){const o={};document.querySelectorAll(`#${id} input`).forEach(i=>{const t=i.value.trim().replace(',','.');if(t==='')return;let v=parseFloat(t);if(isNaN(v))return;if(v>1)v=v/100;o[i.dataset.k]=v;});return o;}
+function rankFromNdcg(n){return Math.pow(2,1/n)-1;}
+function renderRead(){
+  const a=readForm('formSys'),b=readForm('formBase');const out=[];
+  const bad=Object.entries(a).filter(([k,v])=>v<0||v>1);
+  if(bad.length){out.push(`<p class="flag">Error: a value is not between 0 and 100. Examine the values.</p>`);}
+  if(a.s5!=null&&a.s10!=null&&a.s5>a.s10)out.push(`<p class="flag">Error: Success@5 is more than Success@10. This is not possible. Examine your evaluation code.</p>`);
+  if(a.s5!=null)out.push(`<p><b>Success@5 = ${f(a.s5,2)}.</b> For ${pct(a.s5)} of queries, the top 5 contains a relevant document. For ${pct(1-a.s5)} of queries, it contains none. In a RAG system with 5 passages, ${pct(1-a.s5)} of answers get no relevant context.</p>`);
+  if(a.s10!=null){let t=`<p><b>Success@10 = ${f(a.s10,2)}.</b> For ${pct(1-a.s10)} of queries, the top 10 contains no relevant document.`;if(a.s5!=null&&a.s10>=a.s5)t+=` For ${pct(a.s10-a.s5)} of queries, the first relevant document is at rank 6 to 10.`;out.push(t+`</p>`);}
+  if(a.r40!=null)out.push(`<p><b>Recall@40 = ${f(a.r40,2)}.</b> The top 40 contains ${pct(a.r40)} of all relevant documents. A reranker that uses the top 40 can never show the other ${pct(1-a.r40)}.</p>`);
+  if(a.n10!=null){const rk=a.n10>0?rankFromNdcg(a.n10):Infinity;let t=`<p><b>nDCG@10 = ${f(a.n10,2)}.</b> The top 10 gives ${pct(a.n10)} of the best possible value.`;
+    t+= rk<=10?` For a query with one relevant document, this value is equal to rank ${rk.toFixed(1)}. With many relevant documents, use this only as a rough guide.`:` This value is less than the value of one relevant document at rank 10. Many queries have no relevant document in the top 10, or have most relevant documents low in the list.`;out.push(t+`</p>`);}
+  const diag=[];
+  if(a.r40!=null&&a.r40<0.7)diag.push(`Recall@40 is low. The retriever is the main problem. A better reranker cannot correct finding failures. Improve the retriever first, or give the reranker more candidates.`);
+  if(a.r40!=null&&a.n10!=null&&a.r40>=0.8&&a.n10<0.5)diag.push(`Recall@40 is high, but nDCG@10 is low. The relevant documents are in the candidates but in the wrong order. A better reranker can help.`);
+  if(a.s5!=null&&a.s10!=null&&a.s10-a.s5<0.05&&a.s10<0.95)diag.push(`Success@5 and Success@10 are almost equal. When the system finds a relevant document, it usually puts it in the top 5. The failures are mostly finding failures.`);
+  if(a.s10!=null&&a.n10!=null&&a.s10-a.n10>0.35)diag.push(`Success@10 is much higher than nDCG@10. Most queries get a relevant document, but not at rank 1, or not the best documents. This can be satisfactory for RAG. It is less satisfactory for a search results page.`);
+  if(diag.length)out.push(`<h3 style="margin-top:1rem">Diagnosis</h3>`+diag.map(d=>`<p>${d}</p>`).join(''));
+  const keys=[['n10','nDCG@10'],['s5','Success@5'],['s10','Success@10'],['r40','Recall@40']].filter(([k])=>a[k]!=null&&b[k]!=null);
+  if(keys.length){out.push(`<h3 style="margin-top:1rem">Comparison with the floor</h3>`+keys.map(([k,n])=>{const d=a[k]-b[k],rel=b[k]>0?d/b[k]:0;return `<p><b>${n}:</b> ${f(b[k],3)} → ${f(a[k],3)}. <span class="${d>0?'goodt':'flag'}">${d>=0?'+':''}${(d*100).toFixed(1)} points</span> (${rel>=0?'+':''}${Math.round(rel*100)}% relative).${b[k]<1?` Your system closes ${Math.round(d/(1-b[k])*100)}% of the gap between the floor and 1.`:''}</p>`;}).join('')+`<p class="sub">A difference of 1 to 2 points can be noise on a small set of queries. Use a paired test on per-query values before you make a decision.</p>`);}
+  else out.push(`<p class="sub">Type BM25 values in the second row to see a comparison with the floor. Without a floor, you cannot say if a value is good.</p>`);
+  $('readOut').innerHTML=out.join('');
+}
+
+function render(){renderBoard();svgSuccess();svgRecall();svgRR();tblAP();svgDisc();svgContrib();svgNDCG();funnel();}
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-i]');if(b){const sel=b.closest('#board')?'#board':'#mini';cycle(+b.dataset.i);const again=document.querySelector(`${sel} [data-i="${b.dataset.i}"]`);if(again)again.focus();return;}
+  const rm=e.target.closest('[data-rm]');if(rm){missed.splice(+rm.dataset.rm,1);render();return;}
+  const add=e.target.closest('[data-add]');if(add){missed.push(+add.dataset.add);missed.sort((a,b)=>b-a);render();return;}
+  const p=e.target.closest('[data-preset]');if(p){load(p.dataset.preset);return;}
+  const g=e.target.closest('[data-gain]');if(g){gainMode=g.dataset.gain;document.querySelectorAll('[data-gain]').forEach(x=>x.setAttribute('aria-pressed',x===g));render();}
+});
+$('rankSlider').addEventListener('input',renderOne);
+document.querySelectorAll('.form input').forEach(i=>i.addEventListener('input',renderRead));
+$('presets').innerHTML=Object.entries(PRESETS).map(([k,v])=>`<button class="btn" data-preset="${k}">${v.label}</button>`).join('');
+
+/* inline glossary */
+const GLOSS=[
+ ['simulated users?','Simulated user','A fixed set of rules inside a metric about how a person reads the list: where the person stops and what the person wants. Not a real person, and not a machine-learning model.'],
+ ['qrels','qrels','The set of relevance judgments for all queries. People made these judgments before the evaluation.'],
+ ['relevant documents?','Relevant document','A document that a person judged as useful for the query. Its grade is more than 0 in the qrels.'],
+ ['not relevant','Not relevant','Grade 0 in the qrels, or not judged. A metric counts an unjudged document as not relevant.'],
+ ['relevant','Relevant','A person judged the document as useful for the query (grade more than 0).'],
+ ['relevance grades?','Relevance grade','A number that a person gives to a document for a query: 0 not relevant, 1 partially relevant, 2 relevant, 3 highly relevant.'],
+ ['grades?','Grade','The relevance value of a document for a query: 0, 1, 2, or 3. A person gives the grade.'],
+ ['rerankers?','Reranker','Stage 2 of the system. It receives the candidates from the retriever and changes their order. It cannot add new documents.'],
+ ['retrievers?','Retriever','Stage 1 of the system. It searches the full corpus and returns the candidate documents, for example the top 40.'],
+ ['candidates?( documents)?','Candidates','The documents that the retriever gives to the reranker, for example the top 40.'],
+ ['ranks?','Rank','The position of a document in the result list. Rank 1 is the top.'],
+ ['ranked list','Ranked list','The list of documents that the system returns for a query, in order from rank 1.'],
+ ['quer(?:y|ies)','Query','The text that a person types to find information.'],
+ ['corpus','Corpus','The full collection of documents that the system can search.'],
+ ['finding failures?','Finding failure','A relevant document is not in the list. A change of order cannot correct it.'],
+ ['ordering failures?','Ordering failure','A relevant document is in the list, but at a low rank. The user stops before it.'],
+ ['IDCG(?:@k|@10)?','IDCG','The DCG of the ideal list: all relevant documents in the qrels, from the highest grade to the lowest grade. It is the maximum DCG for the query.'],
+ ['ideal (?:list|ranking|order)','Ideal list','All relevant documents in the qrels, in order from the highest grade to the lowest grade. No system can do better.'],
+ ['gain','Gain','The value of a document from its grade. Linear gain uses the grade. Exponential gain uses 2^grade − 1.'],
+ ['discount','Discount','The amount that the value of a document decreases because of its rank. DCG divides the gain by log₂(rank + 1).'],
+ ['floor','Floor','The result of a simple baseline, usually BM25, on the same queries and qrels. A good system must be above the floor.'],
+ ['ceiling','Ceiling','The best possible value. For a reranker, this is the value of a perfect order of its candidates.'],
+ ['BM25','BM25','A classic keyword-based retrieval method. It is the usual baseline in retrieval papers.'],
+ ['RAG','RAG','Retrieval-augmented generation. The system gives the top documents to an LLM, which writes an answer from them.'],
+ ['harmonic mean','Harmonic mean','The number of values divided by the sum of their reciprocals. It gives more weight to small values.'],
+ ['top k','Top k','The first k results of the list, from rank 1 to rank k.']
+];
+const SYMS={R:['R','The total number of relevant documents for this query in the qrels, also the ones that the system did not return.'],k:['k','The number of top results that the metric uses. In Recall@40, k = 40.'],i:['i','A rank in the list. Rank 1 is the top.'],f:['f','The rank of the first relevant document.'],r:['r','A rank in the list. Rank 1 is the top.']};
+const GRE=new RegExp('\\b('+GLOSS.map(g=>g[0]).join('|')+')\\b','gi');
+const GFIND=t=>GLOSS.find(g=>new RegExp('^(?:'+g[0]+')$','i').test(t));
+const SKIP='.tex,mjx-container,.piece .val,svg,h1,h2,h3,h4,dt,button,label,input,.math,.where,.tbl,.board,.controls,.chips,.term,#funnel,#readOut,.bars,.work,.sub,.legend,.depth,#tip,.kpis';
+const blockOf=n=>n.closest('p,dd,li,.insight,.say,.card')||n.parentElement;
+function mkTerm(label,title,def,inner){const b=document.createElement('button');b.type='button';b.className='term';b.dataset.t=title;b.dataset.d=def;b.setAttribute('aria-expanded','false');if(inner)b.appendChild(inner);else b.textContent=label;return b;}
+function glossify(){
+  const main=document.querySelector('main');const seen=new Map();const firstIn=(blk,key)=>{if(!seen.has(blk))seen.set(blk,new Set());const s=seen.get(blk);if(s.has(key))return false;s.add(key);return true;};
+  main.querySelectorAll('i').forEach(el=>{const t=el.textContent.trim();if(!SYMS[t]||el.closest(SKIP))return;if(!firstIn(blockOf(el),'sym:'+t))return;const [ti,d]=SYMS[t];const clone=el.cloneNode(true);el.replaceWith(mkTerm('',ti,d,clone));});
+  const walker=document.createTreeWalker(main,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement&&!n.parentElement.closest(SKIP)&&n.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
+  const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  nodes.forEach(node=>{const txt=node.nodeValue;GRE.lastIndex=0;if(!GRE.test(txt))return;GRE.lastIndex=0;const blk=blockOf(node.parentElement);const frag=document.createDocumentFragment();let last=0,m,changed=false;
+    while((m=GRE.exec(txt))){const g=GFIND(m[0]);if(!g)continue;if(!firstIn(blk,g[1]))continue;frag.appendChild(document.createTextNode(txt.slice(last,m.index)));frag.appendChild(mkTerm(m[0],g[1],g[2]));last=m.index+m[0].length;changed=true;}
+    if(!changed)return;frag.appendChild(document.createTextNode(txt.slice(last)));node.replaceWith(frag);});
+  const tip=document.createElement('div');tip.id='tip';tip.setAttribute('role','tooltip');document.body.appendChild(tip);let cur=null;
+  const show=b=>{if(cur&&cur!==b)cur.setAttribute('aria-expanded','false');cur=b;tip.innerHTML='';const h=document.createElement('b');h.textContent=b.dataset.t;tip.appendChild(h);tip.appendChild(document.createTextNode(b.dataset.d));b.setAttribute('aria-describedby','tip');b.setAttribute('aria-expanded','true');tip.classList.add('on');
+    const r=b.getBoundingClientRect(),tw=tip.offsetWidth,th=tip.offsetHeight;let x=Math.min(Math.max(12,r.left+r.width/2-tw/2),innerWidth-tw-12);let y=r.bottom+8;if(y+th>innerHeight-12)y=r.top-th-8;tip.style.left=x+'px';tip.style.top=y+'px';};
+  const hide=()=>{if(cur){cur.setAttribute('aria-expanded','false');cur.removeAttribute('aria-describedby');}cur=null;tip.classList.remove('on');};
+  main.addEventListener('mouseover',e=>{const b=e.target.closest('.term');if(b)show(b);});
+  main.addEventListener('mouseout',e=>{const b=e.target.closest('.term');if(b&&!b.contains(e.relatedTarget))hide();});
+  main.addEventListener('focusin',e=>{const b=e.target.closest('.term');if(b)show(b);});
+  main.addEventListener('focusout',e=>{if(e.target.closest('.term'))hide();});
+  document.addEventListener('click',e=>{const b=e.target.closest('.term');if(b){e.preventDefault();cur===b&&tip.classList.contains('on')?hide():show(b);}else hide();},true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});
+  addEventListener('scroll',hide,{passive:true});
+}
+
+document.querySelectorAll('.toc [data-go]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();const t=document.getElementById(a.dataset.go);if(!t)return;const d=t.closest('details');if(d)d.open=true;const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;t.scrollIntoView({behavior:reduce?'auto':'smooth'});}));
+drawOnion();svgFail();renderOne();tblOne();svgDumb();load('mixed');renderRead();glossify();
+/* progress bar + section rail */
+(function(){
+  const bar=document.querySelector('#progress i');
+  const items=[...document.querySelectorAll('.toc [data-go]')].map(a=>{const el=document.getElementById(a.dataset.go);if(!el)return null;
+    const lvl=a.parentElement.parentElement.closest('li')?'h3':'h2';
+    let pv=el.querySelector('.question')||el.querySelector('dl.reader dd:nth-of-type(2)');
+    if(!pv){let n=el.nextElementSibling;while(n&&n.tagName!=='P')n=n.nextElementSibling;pv=n;}
+    const sec=el.closest('section');const num=sec?([...document.querySelectorAll('section.layer')].indexOf(sec)+1):'';
+    return {el,title:a.textContent,lvl,preview:pv?pv.textContent.trim():'',num};}).filter(Boolean);
+  const rail=document.createElement('nav');rail.className='rail';rail.setAttribute('aria-label','Page sections');
+  const card=document.createElement('div');card.className='railcard';card.setAttribute('aria-hidden','true');
+  items.forEach((it,i)=>{const b=document.createElement('button');b.type='button';b.className=it.lvl;b.setAttribute('aria-label',it.title);b.innerHTML='<i></i>';
+    const show=()=>{card.innerHTML=`<div class="rk">Section ${it.num}${it.lvl==='h3'?' · part':''}</div><b></b><p></p>`;card.querySelector('b').textContent=it.title;card.querySelector('p').textContent=it.preview;
+      const r=b.getBoundingClientRect();card.classList.add('on');let y=r.top+r.height/2-card.offsetHeight/2;y=Math.max(12,Math.min(y,innerHeight-card.offsetHeight-12));card.style.left=(r.right+18)+'px';card.style.top=y+'px';};
+    const hide=()=>card.classList.remove('on');
+    b.addEventListener('mouseenter',show);b.addEventListener('focus',show);b.addEventListener('mouseleave',hide);b.addEventListener('blur',hide);
+    b.addEventListener('click',()=>{const d=it.el.closest('details');if(d)d.open=true;const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;it.el.scrollIntoView({behavior:reduce?'auto':'smooth'});});
+    it.btn=b;rail.appendChild(b);});
+  document.body.appendChild(rail);document.body.appendChild(card);
+  let ticking=false,hoverIdx=null,scrollPos=0;
+  function paint(){const hov=hoverIdx!=null;const near=hov?hoverIdx:Math.round(scrollPos);
+    items.forEach((it,k)=>{let wpx=14;if(hov){const d=k-hoverIdx,w=Math.exp(-(d*d)/(2*1.3*1.3));wpx=(it.lvl==='h2'?10:7)+(it.lvl==='h2'?26:22)*w;}
+      it.btn.firstChild.style.width=wpx+'px';it.btn.classList.toggle('on',k===near);});}
+  function update(){ticking=false;const h=document.documentElement;const max=h.scrollHeight-innerHeight;bar.style.transform=`scaleX(${max>0?Math.min(1,scrollY/max):0})`;
+    const line=innerHeight*0.35,tops=items.map(it=>it.el.getBoundingClientRect().top);let i=-1;tops.forEach((t,k)=>{if(t<=line)i=k;});
+    if(i<0)scrollPos=0;else if(i>=items.length-1)scrollPos=items.length-1;else{const f=(line-tops[i])/Math.max(1,tops[i+1]-tops[i]);scrollPos=i+Math.max(0,Math.min(1,f));}
+    if(max>0&&scrollY>=max-2)scrollPos=items.length-1;
+    paint();}
+  items.forEach((it,i)=>{it.btn.addEventListener('mouseenter',()=>{hoverIdx=i;paint();});it.btn.addEventListener('focus',()=>{hoverIdx=i;paint();});});
+  rail.addEventListener('mouseleave',()=>{hoverIdx=null;paint();});
+  rail.addEventListener('focusout',e=>{if(!rail.contains(e.relatedTarget)){hoverIdx=null;paint();}});
+  addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(update);}},{passive:true});
+  addEventListener('resize',update);update();
+})();
+
+})();
+</script>
+</body>
+</html>

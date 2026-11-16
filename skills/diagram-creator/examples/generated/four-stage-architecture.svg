@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1540 640" role="img" aria-labelledby="four-stage-architecture-title four-stage-architecture-desc" font-family="Helvetica,Arial,sans-serif">
+<title id="four-stage-architecture-title">Episode-to-chapters architecture</title>
+<desc id="four-stage-architecture-desc">One pinned episode enters the system. One verified plan or one typed stop result leaves the system.</desc>
+<defs><marker id="four-stage-architecture-arrow-047857" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#047857"/></marker><marker id="four-stage-architecture-arrow-64748b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#64748b"/></marker><marker id="four-stage-architecture-arrow-6d28d9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#6d28d9"/></marker><marker id="four-stage-architecture-arrow-b91c1c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#b91c1c"/></marker></defs>
+<rect width="1540" height="640" fill="#ffffff"/>
+<text x="40" y="46" font-size="28" font-weight="700" fill="#121a2a">Episode-to-chapters architecture</text>
+<text x="40" y="74" font-size="14" fill="#556176">One pinned episode enters the system. One verified plan or one typed stop result leaves the system.</text>
+<polyline id="e1" points="230.0,225.0 290.0,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#four-stage-architecture-arrow-64748b)"/>
+<polyline id="e2" points="480.0,225.0 540.0,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#four-stage-architecture-arrow-64748b)"/>
+<polyline id="e3" points="730.0,225.0 790.0,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#four-stage-architecture-arrow-64748b)"/>
+<polyline id="e4" points="980.0,225.0 1040.0,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#four-stage-architecture-arrow-64748b)"/>
+<polyline id="e5" points="1230.0,225.0 1290.0,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#four-stage-architecture-arrow-64748b)"/>
+<polyline id="e6" points="1380.0,285.0 1380.0,360.0 1175.0,360.0 1175.0,450.0" fill="none" stroke="#047857" stroke-width="1.8" marker-end="url(#four-stage-architecture-arrow-047857)"/>
+<polyline id="e7" points="1470.0,225.0 1520.0,225.0 1520.0,400.0 1415.0,400.0 1415.0,450.0" fill="none" stroke="#b91c1c" stroke-width="1.8" marker-end="url(#four-stage-architecture-arrow-b91c1c)"/>
+<polyline id="e8" points="1135.0,280.0 1135.0,350.0 885.0,350.0 885.0,280.0" fill="none" stroke="#6d28d9" stroke-width="1.8" marker-end="url(#four-stage-architecture-arrow-6d28d9)" stroke-dasharray="7 5"/>
+<g id="input">
+<rect x="40" y="170" width="190" height="110" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1.8"/>
+<text x="135.0" y="211.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Pinned input</text>
+<text x="135.0" y="233.5" text-anchor="middle" font-size="13" fill="#556176">Episode and source</text>
+<text x="135.0" y="250.5" text-anchor="middle" font-size="13" fill="#556176">snapshot</text>
+</g>
+<g id="scope">
+<rect x="290" y="170" width="190" height="110" rx="8" fill="#e8f0ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="385.0" y="206.5" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing=".7" fill="#2563eb">STAGE 0</text>
+<text x="385.0" y="227.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Scope request</text>
+<text x="385.0" y="249.5" text-anchor="middle" font-size="13" fill="#556176">Compile policy and budgets</text>
+</g>
+<g id="evidence">
+<rect x="540" y="170" width="190" height="110" rx="8" fill="#fff0dd" stroke="#ea580c" stroke-width="1.8"/>
+<text x="635.0" y="206.5" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing=".7" fill="#ea580c">STAGE 1</text>
+<text x="635.0" y="227.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Prepare evidence</text>
+<text x="635.0" y="249.5" text-anchor="middle" font-size="13" fill="#556176">Build the cited scene view</text>
+</g>
+<g id="story">
+<rect x="790" y="170" width="190" height="110" rx="8" fill="#f0edff" stroke="#6d28d9" stroke-width="1.8"/>
+<text x="885.0" y="197.5" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing=".7" fill="#6d28d9">STAGE 2</text>
+<text x="885.0" y="218.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Build story map</text>
+<text x="885.0" y="240.5" text-anchor="middle" font-size="13" fill="#556176">Prove beats and solve</text>
+<text x="885.0" y="257.5" text-anchor="middle" font-size="13" fill="#556176">chapters</text>
+</g>
+<g id="fit">
+<rect x="1040" y="170" width="190" height="110" rx="8" fill="#dcfce7" stroke="#047857" stroke-width="1.8"/>
+<text x="1135.0" y="197.5" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing=".7" fill="#047857">STAGE 3</text>
+<text x="1135.0" y="218.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Fit and verify</text>
+<text x="1135.0" y="240.5" text-anchor="middle" font-size="13" fill="#556176">Check duration, hooks, and</text>
+<text x="1135.0" y="257.5" text-anchor="middle" font-size="13" fill="#556176">closure</text>
+</g>
+<g id="gate">
+<rect x="1290" y="165" width="180" height="120" rx="8" fill="#fef3c7" stroke="#a16207" stroke-width="1.8"/>
+<text x="1380.0" y="232.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">All rules pass?</text>
+</g>
+<g id="success">
+<rect x="1080" y="450" width="190" height="110" rx="8" fill="#dcfce7" stroke="#047857" stroke-width="1.8"/>
+<text x="1175.0" y="500.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Verified plan</text>
+<text x="1175.0" y="522.5" text-anchor="middle" font-size="13" fill="#556176">MicroDramaPlan, fully cited</text>
+</g>
+<g id="stop">
+<rect x="1330" y="450" width="170" height="110" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.8"/>
+<text x="1415.0" y="500.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Typed stop</text>
+<text x="1415.0" y="522.5" text-anchor="middle" font-size="13" fill="#556176">Failure or abstention</text>
+</g>
+<rect x="1261.4" y="341.0" width="32.2" height="16" rx="3" fill="#ffffff"/>
+<text x="1277.5" y="354.0" text-anchor="middle" font-size="12" font-weight="700" fill="#047857">yes</text>
+<rect x="1506.8" y="293.5" width="26.5" height="16" rx="3" fill="#ffffff"/>
+<text x="1520.0" y="306.5" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">no</text>
+<rect x="964.5" y="331.0" width="91.0" height="16" rx="3" fill="#ffffff"/>
+<text x="1010.0" y="344.0" text-anchor="middle" font-size="12" font-weight="700" fill="#6d28d9">repair (max 2)</text>
+</svg>

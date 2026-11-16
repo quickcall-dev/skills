@@ -1,0 +1,68 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" modified="2026-11-16T00:00:00.000Z" agent="diagram-creator" version="1.0">
+  <diagram id="page-1" name="Architecture">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1480" pageHeight="580" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="input" value="&lt;b&gt;Query set and qrels&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Queries plus judged relevance grades&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#475569;fillColor=#f1f5f9;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="170" width="210" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="retrieve" value="&lt;b&gt;Retrieve candidates&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Search the corpus, return top 40&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#2563eb;fillColor=#e8f0ff;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="310" y="170" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="rerank" value="&lt;b&gt;Rerank candidates&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Reorder the 40, remove none&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#ea580c;fillColor=#fff0dd;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="570" y="170" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="judge" value="&lt;b&gt;Score the run&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;nDCG@10, Recall@40, Success@5&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#a16207;fillColor=#fef3c7;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="830" y="165" width="190" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="report" value="&lt;b&gt;Metric report&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Per-query scores and averages&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#047857;fillColor=#dcfce7;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="80" width="210" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="abstain" value="&lt;b&gt;Abstain&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;The query set lacks judgments&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#b91c1c;fillColor=#fee2e2;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="330" width="210" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="r1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#64748b;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1" source="input" target="retrieve">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#64748b;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1" source="retrieve" target="rerank">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#64748b;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1" source="rerank" target="judge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r4" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#047857;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1" source="judge" target="report">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="925.0" y="135.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r5" value="no judgments" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b91c1c;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1" source="judge" target="abstain">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1195.0" y="225.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r6" value="ordering failure" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#ea580c;dashed=1;endArrow=block;endFill=1;" edge="1" parent="1" source="judge" target="rerank">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="925.0" y="370.0" />
+              <mxPoint x="670.0" y="370.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r7" value="finding failure" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563eb;dashed=1;endArrow=block;endFill=1;" edge="1" parent="1" source="abstain" target="retrieve">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1195.0" y="480.0" />
+              <mxPoint x="410.0" y="480.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

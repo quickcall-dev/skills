@@ -1,0 +1,65 @@
+<section class="hero" id="top"><div class="wrap">
+  <div class="eyebrow">Standalone architecture template</div>
+  <h1>State the system and its boundary</h1>
+  <p class="lead">Explain the input, transformation, output, and stop conditions. Keep the document useful without an earlier plan.</p>
+  <div class="authority"><strong>Authority.</strong> State what this document replaces, what remains authoritative, and what is outside its scope.</div>
+</div></section>
+
+<section id="document-index"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Index</div><h2>Document index</h2></div><p>Keep every major section one click away.</p></div>
+  <ul class="index-links">
+    <li><a href="#overview">System overview</a></li>
+    <li><a href="#architecture">Architecture diagram</a></li>
+    <li><a href="#contracts">Object contracts</a></li>
+    <li><a href="#tests">Test gates</a></li>
+    <li><a href="#done">Completion gate</a></li>
+  </ul>
+</div></section>
+
+<section id="overview"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Overview</div><h2>Four system stages</h2></div><p>Use short cards for orientation. Put the detailed explanation below, not inside these cards.</p></div>
+  <div class="summary-grid">
+    <article class="summary-card"><h3>0 · Scope</h3><p>Pin the input and compile policy.</p><div class="summary-output">Output: compiled request</div></article>
+    <article class="summary-card"><h3>1 · Evidence</h3><p>Build the cited evidence view.</p><div class="summary-output">Output: evidence provider</div></article>
+    <article class="summary-card"><h3>2 · Reason</h3><p>Prove requirements and solve candidates.</p><div class="summary-output">Output: candidate sequence</div></article>
+    <article class="summary-card"><h3>3 · Verify</h3><p>Fit the output and apply hard gates.</p><div class="summary-output">Output: plan or typed stop</div></article>
+  </div>
+</div></section>
+
+<section id="architecture"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Architecture</div><h2>End-to-end system contract</h2></div><p>Place the diagram next to the architecture it explains.</p></div>
+  <figure class="architecture-diagram">
+    <div class="diagram-bar"><h3>Four-stage architecture</h3><a href="../../../diagram-creator/examples/generated/four-stage-architecture.drawio">Open editable diagram</a></div>
+    <div class="diagram-canvas"><img src="../../../diagram-creator/examples/generated/four-stage-architecture.svg" alt="Four-stage architecture with a pinned input, evidence preparation, story reasoning, validation, a verified plan, and a typed stop result."></div>
+  </figure>
+</div></section>
+
+<section id="contracts"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Contracts</div><h2>Complete object definitions</h2></div><p>Show every required field. Do not hide fields behind ellipses.</p></div>
+  <pre class="code-block"><code>runResult:
+  status: VERIFIED_PLAN
+  inputRef: episode-001
+  outputRef: plan-001
+  validation:
+    hardGatesPassed: true
+    failures: []
+  provenance:
+    sourceHash: sha256:example
+    schemaVersion: v1</code></pre>
+</div></section>
+
+<section id="tests"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Tests</div><h2>Stage verification gate</h2></div><p>Keep the test method and negative behavior visible.</p></div>
+  <div class="test-grid">
+    <article><h3>Method</h3><p>Replay one pinned input and change one field at a time.</p></article>
+    <article><h3>Good output</h3><p>All references resolve and each hard gate passes.</p></article>
+    <article><h3>Bad output</h3><p>The system emits a partial plan or hides an unresolved requirement.</p></article>
+    <article><h3>Minimum</h3><p>One complete positive case and one typed negative case pass.</p></article>
+  </div>
+  <div class="table-scroll"><table><thead><tr><th>Case</th><th>Oracle</th></tr></thead><tbody><tr><td>Valid input</td><td>Emits one verified result.</td></tr><tr><td>Missing evidence</td><td>Emits one typed stop with the unresolved requirement.</td></tr></tbody></table></div>
+</div></section>
+
+<section class="finish" id="done"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Done</div><h2>Document completion gate</h2></div><p>The HTML is complete only after content, links, diagrams, responsiveness, and browser behavior pass review.</p></div>
+</div></section>
+

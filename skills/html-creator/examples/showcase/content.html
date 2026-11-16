@@ -1,0 +1,152 @@
+<section class="hero" id="top"><div class="wrap">
+  <div class="eyebrow">Architecture plan · AP-7 · Replaces ADR-3</div>
+  <h1>Episode-to-chapters planning service</h1>
+  <p class="lead">One pinned episode enters the system. One verified plan or one typed stop result leaves it. This plan specifies the four stages, their contracts, the terminal states, and the gate that decides between them.</p>
+  <div class="authority"><strong>Authority.</strong> This plan replaces ADR-3 and the stage sketches in PLAN-5. The episode schema v2 and the citation format remain authoritative. Rendering, playback, and packaging are outside its scope.</div>
+</div></section>
+
+<section id="document-index"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Index</div><h2>Document index</h2></div><p>Every section of this plan, one click away. The document reads standalone in this order.</p></div>
+  <ul class="index-links">
+    <li><a href="#overview">System overview</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+    <li><a href="#architecture">Architecture diagram</a></li>
+    <li><a href="#contracts">Object contracts</a></li>
+    <li><a href="#states">Failure and result states</a></li>
+    <li><a href="#tests">Test gates</a></li>
+    <li><a href="#example">Worked example</a></li>
+    <li><a href="#done">Completion gate</a></li>
+  </ul>
+</div></section>
+
+<section id="overview"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Overview</div><h2>Four stages, one gate</h2></div><p>The service compiles a chapter plan from a pinned episode. Each stage has one input contract, one output contract, and one failure mode it must report.</p></div>
+  <div class="summary-grid">
+    <article class="summary-card"><h3>0 · Scope</h3><p>Pin the input, compile policy, set budgets for duration, beats, and chapters.</p><div class="summary-output">Output: scoped request</div></article>
+    <article class="summary-card"><h3>1 · Evidence</h3><p>Build the cited scene view. Every claim in the plan points at a source span.</p><div class="summary-output">Output: evidence view</div></article>
+    <article class="summary-card"><h3>2 · Reason</h3><p>Prove the beats and solve chapters against the budgets. Repair is bounded to two passes.</p><div class="summary-output">Output: candidate sequence</div></article>
+    <article class="summary-card"><h3>3 · Verify</h3><p>Fit the output and apply the hard gates. A failure emits a typed stop, never a partial plan.</p><div class="summary-output">Output: plan or typed stop</div></article>
+  </div>
+  <div class="callout note"><strong>Invariant.</strong> A stage never returns to a closed stage. Repair moves one step back at most, and at most twice per run.</div>
+</div></section>
+
+<section id="glossary"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Glossary</div><h2>Terms used in this plan</h2></div><p>One term per concept. The same word keeps the same meaning in code, diagrams, and tests.</p></div>
+  <dl class="glossary">
+    <div><dt>Episode</dt><dd>The source material: a transcript, a chapter list, or a story bible.</dd></div>
+    <div><dt>Pinned input</dt><dd>An episode with a content hash. The hash anchors every citation.</dd></div>
+    <div><dt>Beat</dt><dd>A story event that the plan must place. Beats are proven before chapters are solved.</dd></div>
+    <div><dt>Chapter</dt><dd>A timed segment of the output. Chapters carry beats and citations.</dd></div>
+    <div><dt>Evidence view</dt><dd>The set of source spans the plan may cite, with offsets into the pinned input.</dd></div>
+    <div><dt>Hard gate</dt><dd>A check that emits a typed stop on failure. Soft gates only record a warning.</dd></div>
+    <div><dt>Typed stop</dt><dd>A terminal result that names the blocking reason. It carries no partial plan.</dd></div>
+    <div><dt>Bounded repair</dt><dd>A return from stage 3 to stage 2. Maximum two passes, then a typed stop.</dd></div>
+  </dl>
+</div></section>
+
+<section id="architecture"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Architecture</div><h2>End-to-end system contract</h2></div><p>Two views of the same system: the stage flow with its gate, and the terminal states every run ends in.</p></div>
+  <figure class="architecture-diagram">
+    <div class="diagram-bar"><h3>Four-stage architecture</h3><a href="../../../diagram-creator/examples/generated/four-stage-architecture.drawio">Open editable diagram</a></div>
+    <div class="diagram-canvas"><img src="../../../diagram-creator/examples/generated/four-stage-architecture.svg" alt="Four-stage architecture. A pinned input passes through scope, evidence, story, and fit stages into an all-rules pass gate. The gate emits a verified plan or a typed stop. A dashed bounded-repair loop returns from fit to story."></div>
+  </figure>
+  <figure class="architecture-diagram">
+    <div class="diagram-bar"><h3>Plan lifecycle states</h3><a href="../../../diagram-creator/examples/generated/plan-lifecycle-states.drawio">Open editable diagram</a></div>
+    <div class="diagram-canvas"><img src="../../../diagram-creator/examples/generated/plan-lifecycle-states.svg" alt="Plan lifecycle states. Received, scoped, evidenced, solved, and verified form the main path. Two dashed failure edges emit terminal typed stops: invalid input and unsolvable episode."></div>
+  </figure>
+</div></section>
+
+<section id="contracts"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Contracts</div><h2>Complete object definitions</h2></div><p>Every required field is shown. No field is hidden behind an ellipsis. Schemas are normative.</p></div>
+  <h3>Run result</h3>
+  <pre class="code-block"><code>runResult:
+  status: VERIFIED_PLAN | TYPED_STOP_INVALID | TYPED_STOP_UNSOLVED
+  inputRef: episode-001
+  outputRef: plan-001
+  hardGates:
+    - name: citations_resolve
+      passed: true
+    - name: budgets_fit
+      passed: true
+    - name: no_orphan_beats
+      passed: true
+  warnings: []
+  provenance:
+    sourceHash: sha256:9f2c…e71a
+    schemaVersion: v2
+    repairPasses: 0</code></pre>
+  <h3>Evidence view</h3>
+  <pre class="code-block"><code>evidenceView:
+  inputRef: episode-001
+  spans:
+    - spanId: span-014
+      startOffset: 5210
+      endOffset: 5890
+      kind: dialogue
+      citation: "ep1 00:52-00:58"
+  coverage: 0.93</code></pre>
+  <div class="callout warn"><strong>Note.</strong> A run result with an empty <code>hardGates</code> list is invalid. The verifier must emit at least one gate record per run.</div>
+</div></section>
+
+<section id="states"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">States</div><h2>Failure and result states</h2></div><p>Every run ends in exactly one state. A typed stop names the blocker; it never carries a partial plan.</p></div>
+  <div class="table-scroll"><table><thead><tr><th>State</th><th>Badge</th><th>Meaning</th><th>Next action</th></tr></thead><tbody>
+    <tr><td>VERIFIED_PLAN</td><td><span class="badge ok">verified</span></td><td>All hard gates passed. The plan is complete and cited.</td><td>Ship to rendering.</td></tr>
+    <tr><td>TYPED_STOP_INVALID</td><td><span class="badge stop">stop</span></td><td>The input could not be pinned or parsed.</td><td>Fix the source, resubmit.</td></tr>
+    <tr><td>TYPED_STOP_UNSOLVED</td><td><span class="badge stop">stop</span></td><td>Bounded repair exhausted. Beats remain unproven or budgets unfit.</td><td>Relax budgets or extend evidence.</td></tr>
+    <tr><td>PARTIAL (rejected)</td><td><span class="badge warn">invalid</span></td><td>Any result that carries a plan with a failed hard gate.</td><td>Never emit. Treat as a verifier bug.</td></tr>
+  </tbody></table></div>
+</div></section>
+
+<section id="tests"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Tests</div><h2>Stage verification gate</h2></div><p>The method stays visible next to the cases. Good and bad output are stated per stage.</p></div>
+  <div class="test-grid">
+    <article><h3>Method</h3><p>Replay one pinned input per stage. Change one field at a time and record the emitted state.</p></article>
+    <article><h3>Good output</h3><p>References resolve, every hard gate record is present, and the state is terminal and typed.</p></article>
+    <article><h3>Bad output</h3><p>A partial plan, a missing gate record, or an untyped failure. All three fail the run.</p></article>
+    <article><h3>Minimum scope</h3><p>One positive case and one typed negative case per stage gate before merge.</p></article>
+  </div>
+  <div class="table-scroll"><table><thead><tr><th>Case</th><th>Input change</th><th>Expected state</th></tr></thead><tbody>
+    <tr><td>T1 · valid episode</td><td>None. Pinned transcript.</td><td>VERIFIED_PLAN, three gate records, no warnings.</td></tr>
+    <tr><td>T2 · unpinnable source</td><td>Corrupt hash.</td><td>TYPED_STOP_INVALID, emitted at stage 0.</td></tr>
+    <tr><td>T3 · missing citation</td><td>Drop one span from the evidence view.</td><td>Repair pass, then TYPED_STOP_UNSOLVED.</td></tr>
+    <tr><td>T4 · budget overflow</td><td>Duration budget below the solved minimum.</td><td>Repair pass, then TYPED_STOP_UNSOLVED.</td></tr>
+    <tr><td>T5 · gate record missing</td><td>Verifier stub omits budgets_fit.</td><td>Invalid runResult. Verifier bug, blocked at review.</td></tr>
+    <tr><td>T6 · third repair pass</td><td>Force a third failure after two passes.</td><td>TYPED_STOP_UNSOLVED. The loop must not run again.</td></tr>
+  </tbody></table></div>
+</div></section>
+
+<section id="example"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Example</div><h2>One run, end to end</h2></div><p>A worked example pins the abstract contracts to concrete values.</p></div>
+  <p>Input <code>episode-001</code> pins at <code>sha256:9f2c…e71a</code>. Stage 1 builds an evidence view with 41 spans and 0.93 coverage. Stage 2 proves 12 beats and solves 6 chapters in one pass. Stage 3 passes all three hard gates.</p>
+  <pre class="code-block"><code>runResult:
+  status: VERIFIED_PLAN
+  inputRef: episode-001
+  outputRef: plan-001
+  hardGates:
+    - {name: citations_resolve, passed: true}
+    - {name: budgets_fit, passed: true}
+    - {name: no_orphan_beats, passed: true}
+  warnings: []
+  provenance:
+    sourceHash: sha256:9f2c…e71a
+    schemaVersion: v2
+    repairPasses: 0</code></pre>
+  <div class="table-scroll"><table><thead><tr><th>Chapter</th><th>Duration</th><th>Beats</th><th>Citations</th></tr></thead><tbody>
+    <tr><td>1 · Arrival</td><td>04:12</td><td>3</td><td>span-001 … span-009</td></tr>
+    <tr><td>2 · The deal</td><td>06:48</td><td>2</td><td>span-010 … span-017</td></tr>
+    <tr><td>3 · Turn</td><td>05:31</td><td>4</td><td>span-018 … span-028</td></tr>
+  </tbody></table></div>
+</div></section>
+
+<section class="finish" id="done"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Done</div><h2>Plan completion gate</h2></div><p>This plan is complete only when every line below holds in the running system.</p></div>
+  <ul class="index-links">
+    <li>All six test cases pass in CI.</li>
+    <li>Diagrams in this file match the code at HEAD.</li>
+    <li>No partial plan has ever been emitted.</li>
+    <li>The repair loop cannot exceed two passes.</li>
+    <li>Every citation resolves against the pinned hash.</li>
+    <li>This file opens standalone from disk and prints without the nav bar.</li>
+  </ul>
+</div></section>

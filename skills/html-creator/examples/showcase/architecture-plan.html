@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Standalone architecture plan with embedded editable diagrams, complete object contracts, failure states, test gates, and a worked example.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23121a2a'/%3E%3Cpath d='M8 9h16v3H8zm0 6h16v3H8zm0 6h11v3H8z' fill='white'/%3E%3C/svg%3E">
+  <title>Architecture plan AP-7: Episode-to-chapters planning service</title>
+  <style>:root{--ink:#121a2a;--muted:#556176;--line:#d7dde7;--paper:#fff;--wash:#f5f7fa;--blue:#2563eb;--blue-soft:#e8f0ff;--orange:#c2410c;--green:#047857;--red:#b91c1c;--max:1240px;--nav:72px}
+*{box-sizing:border-box}html{scroll-behavior:auto;scroll-padding-top:calc(var(--nav) + 20px)}body{margin:0;color:var(--ink);background:var(--wash);font:16px/1.58 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:var(--blue)}img,svg{max-width:100%}h1,h2,h3,h4{margin:0;line-height:1.12;letter-spacing:-.025em}h1{font-size:clamp(42px,6vw,72px);max-width:1100px}h2{font-size:clamp(30px,4vw,44px)}h3{font-size:20px}p{margin:0}.wrap{width:min(calc(100% - 48px),var(--max));margin-inline:auto}[id]{scroll-margin-top:calc(var(--nav) + 20px)}
+.top{position:sticky;top:0;z-index:10;height:var(--nav);border-bottom:1px solid var(--line);background:var(--paper)}.top .wrap{height:100%;display:grid;grid-template-columns:minmax(210px,1fr) auto minmax(130px,1fr);align-items:center;gap:24px}.brand{display:flex;align-items:center;gap:12px;color:var(--ink);text-decoration:none}.brand-mark{width:32px;height:32px;display:grid;place-items:center;background:var(--ink);color:#fff;font:700 12px/1 ui-monospace,monospace}.brand-copy{display:grid;line-height:1.15}.brand-copy small{margin-top:3px;color:var(--muted);font-size:12px}.stage-nav{display:flex;height:100%;align-items:stretch}.stage-nav a{position:relative;display:flex;align-items:center;padding:0 12px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap}.stage-nav a::after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:2px;background:var(--blue);transform:scaleX(0);transform-origin:left}.stage-nav a:hover,.stage-nav a[aria-current="location"]{color:var(--ink)}.stage-nav a:hover::after,.stage-nav a[aria-current="location"]::after{transform:scaleX(1)}.contents-link{justify-self:end;border:1px solid var(--line);padding:9px 12px;color:var(--ink);font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap}
+main>section{padding:76px 0;border-bottom:1px solid var(--line);background:var(--paper)}main>section:nth-child(even){background:var(--wash)}.hero{padding:96px 0 80px}.eyebrow{margin-bottom:18px;color:var(--blue);font:700 11px/1.2 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase}.lead{max-width:920px;margin-top:22px;color:var(--muted);font-size:clamp(18px,2vw,24px)}.authority{max-width:96ch;margin-top:30px;padding:18px 22px;border-left:4px solid var(--blue);background:var(--blue-soft)}.head{display:grid;grid-template-columns:1fr minmax(280px,500px);gap:40px;align-items:end;margin-bottom:34px}.head p{color:var(--muted);font-size:17px}.index-links{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin:0;padding:0;list-style:none}.index-links li{padding:11px 0;border-bottom:1px solid var(--line)}
+.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);background:var(--paper)}.summary-card{display:flex;min-width:0;min-height:230px;flex-direction:column;padding:24px;border-right:1px solid var(--line)}.summary-card:last-child{border-right:0}.summary-card p{margin-top:12px;color:var(--muted);font-size:14px}.summary-output{margin-top:auto;padding-top:18px;border-top:1px solid var(--line);font-size:13px;font-weight:700}.architecture-diagram{margin:32px 0 44px;border:1px solid var(--line);background:var(--paper)}.diagram-bar{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 20px;border-bottom:1px solid var(--line)}.diagram-bar h3{font-size:18px}.diagram-bar a{font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}.diagram-canvas{overflow-x:auto}.diagram-canvas>svg,.diagram-canvas>img{display:block;width:100%;height:auto;min-width:920px}
+.table-scroll{max-width:100%;margin:22px 0;overflow-x:auto;border:1px solid var(--line);background:var(--paper)}table{width:100%;min-width:680px;border-collapse:collapse}th,td{padding:13px 15px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:left;vertical-align:top}tr:last-child>*{border-bottom:0}tr>*:last-child{border-right:0}th{color:var(--muted);font-size:12px;letter-spacing:.05em;text-transform:uppercase}td{font-size:14px}.code-block{margin:22px 0;padding:20px 22px;overflow:auto;background:#152033;color:#edf3ff;font:13px/1.58 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre}.test-grid{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);background:var(--paper)}.test-grid article{padding:22px;border-right:1px solid var(--line)}.test-grid article:last-child{border-right:0}.test-grid p{margin-top:10px;color:var(--muted);font-size:14px}.finish{background:var(--ink)!important;color:#fff}.finish p{color:#d7deea}.finish a{color:#a8c4ff}
+@media(max-width:1050px){:root{--nav:118px}.top{height:auto;min-height:var(--nav)}.top .wrap{grid-template-columns:1fr auto;gap:10px;padding-top:10px}.stage-nav{grid-column:1/-1;order:3;width:100%;height:46px;overflow-x:auto;border-top:1px solid var(--line);scrollbar-width:none}.stage-nav::-webkit-scrollbar{display:none}.stage-nav a:first-child{padding-left:0}.stage-nav a:first-child::after{left:0}.summary-grid,.test-grid{grid-template-columns:1fr 1fr}.summary-card:nth-child(2),.test-grid article:nth-child(2){border-right:0}.summary-card:nth-child(-n+2),.test-grid article:nth-child(-n+2){border-bottom:1px solid var(--line)}.head{grid-template-columns:1fr;gap:12px}}
+@media(max-width:620px){:root{--nav:112px}.wrap{width:min(calc(100% - 28px),var(--max))}.brand-copy small{display:none}.contents-link{padding:8px}.stage-nav a{padding:0 10px}.hero,main>section{padding:56px 0}.index-links,.summary-grid,.test-grid{grid-template-columns:1fr}.summary-card,.test-grid article{min-height:0;border-right:0;border-bottom:1px solid var(--line)}.summary-card:last-child,.test-grid article:last-child{border-bottom:0}.diagram-bar{align-items:flex-start}.diagram-bar h3{font-size:16px}.diagram-canvas>svg,.diagram-canvas>img{width:920px;max-width:none}.lead{font-size:18px}}
+@media print{.top{display:none}html{scroll-padding-top:0}body{background:#fff}main>section{break-inside:avoid;padding:36px 0}.architecture-diagram{break-inside:avoid}.diagram-canvas{overflow:visible}.diagram-canvas>svg,.diagram-canvas>img{min-width:0}.finish{background:#fff!important;color:var(--ink)}.finish p{color:var(--muted)}}
+
+
+/* taste pass: motion, focus, selection, and teaching components */
+::selection{background:var(--blue-soft);color:var(--ink)}
+.skip-link{position:absolute;left:-999px;top:0;z-index:30;background:var(--ink);color:#fff;padding:10px 14px;font-size:13px;font-weight:700;text-decoration:none}
+.skip-link:focus{left:12px;top:12px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.index-links a{position:relative;display:inline-block;padding:2px 0;color:var(--ink);font-weight:600;text-decoration:none}
+.index-links a::after{content:"";position:absolute;left:0;right:100%;bottom:-1px;height:2px;background:var(--blue);transition:right .22s ease}
+.index-links a:hover::after,.index-links a:focus-visible::after{right:0}
+.summary-card{transition:transform .18s ease,box-shadow .18s ease}
+.summary-card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(18,26,42,.08)}
+.test-grid article{transition:background .18s ease}
+.test-grid article:hover{background:var(--wash)}
+.table-scroll tbody tr{transition:background .15s ease}
+.table-scroll tbody tr:hover{background:var(--wash)}
+th{white-space:nowrap}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font:700 11px/1.6 ui-monospace,monospace;letter-spacing:.05em}
+.badge.ok{background:#dcfce7;color:#047857}
+.badge.stop{background:#fee2e2;color:#b91c1c}
+.badge.warn{background:#fef3c7;color:#a16207}
+.glossary{display:grid;grid-template-columns:1fr 1fr;gap:0 40px;margin:22px 0}
+.glossary>div{padding:13px 0;border-bottom:1px solid var(--line)}
+.glossary dt{font-weight:700;font-size:15px}
+.glossary dd{margin:4px 0 0;color:var(--muted);font-size:14px}
+.callout{margin:22px 0;padding:18px 22px;border-left:4px solid var(--line);background:var(--wash)}
+.callout.note{border-left-color:var(--blue)}
+.callout.warn{border-left-color:var(--orange)}
+.code-block{border:1px solid #0e1626;border-radius:10px}
+@media(max-width:620px){.glossary{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#document-index">Skip to contents</a>
+<header class="top"><div class="wrap">
+  <a class="brand" href="#top"><span class="brand-mark">AP-7</span><span class="brand-copy"><strong>Planning service</strong><small>Standalone architecture plan</small></span></a>
+  <nav class="stage-nav" aria-label="Document stages"><a href="#overview">Overview</a><a href="#architecture">Architecture</a><a href="#contracts">Contracts</a><a href="#states">States</a><a href="#tests">Tests</a><a href="#example">Example</a><a href="#done">Done</a></nav>
+  <a class="contents-link" href="#document-index">All sections ↓</a>
+</div></header>
+<main>
+<section class="hero" id="top"><div class="wrap">
+  <div class="eyebrow">Architecture plan · AP-7 · Replaces ADR-3</div>
+  <h1>Episode-to-chapters planning service</h1>
+  <p class="lead">One pinned episode enters the system. One verified plan or one typed stop result leaves it. This plan specifies the four stages, their contracts, the terminal states, and the gate that decides between them.</p>
+  <div class="authority"><strong>Authority.</strong> This plan replaces ADR-3 and the stage sketches in PLAN-5. The episode schema v2 and the citation format remain authoritative. Rendering, playback, and packaging are outside its scope.</div>
+</div></section>
+
+<section id="document-index"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Index</div><h2>Document index</h2></div><p>Every section of this plan, one click away. The document reads standalone in this order.</p></div>
+  <ul class="index-links">
+    <li><a href="#overview">System overview</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+    <li><a href="#architecture">Architecture diagram</a></li>
+    <li><a href="#contracts">Object contracts</a></li>
+    <li><a href="#states">Failure and result states</a></li>
+    <li><a href="#tests">Test gates</a></li>
+    <li><a href="#example">Worked example</a></li>
+    <li><a href="#done">Completion gate</a></li>
+  </ul>
+</div></section>
+
+<section id="overview"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Overview</div><h2>Four stages, one gate</h2></div><p>The service compiles a chapter plan from a pinned episode. Each stage has one input contract, one output contract, and one failure mode it must report.</p></div>
+  <div class="summary-grid">
+    <article class="summary-card"><h3>0 · Scope</h3><p>Pin the input, compile policy, set budgets for duration, beats, and chapters.</p><div class="summary-output">Output: scoped request</div></article>
+    <article class="summary-card"><h3>1 · Evidence</h3><p>Build the cited scene view. Every claim in the plan points at a source span.</p><div class="summary-output">Output: evidence view</div></article>
+    <article class="summary-card"><h3>2 · Reason</h3><p>Prove the beats and solve chapters against the budgets. Repair is bounded to two passes.</p><div class="summary-output">Output: candidate sequence</div></article>
+    <article class="summary-card"><h3>3 · Verify</h3><p>Fit the output and apply the hard gates. A failure emits a typed stop, never a partial plan.</p><div class="summary-output">Output: plan or typed stop</div></article>
+  </div>
+  <div class="callout note"><strong>Invariant.</strong> A stage never returns to a closed stage. Repair moves one step back at most, and at most twice per run.</div>
+</div></section>
+
+<section id="glossary"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Glossary</div><h2>Terms used in this plan</h2></div><p>One term per concept. The same word keeps the same meaning in code, diagrams, and tests.</p></div>
+  <dl class="glossary">
+    <div><dt>Episode</dt><dd>The source material: a transcript, a chapter list, or a story bible.</dd></div>
+    <div><dt>Pinned input</dt><dd>An episode with a content hash. The hash anchors every citation.</dd></div>
+    <div><dt>Beat</dt><dd>A story event that the plan must place. Beats are proven before chapters are solved.</dd></div>
+    <div><dt>Chapter</dt><dd>A timed segment of the output. Chapters carry beats and citations.</dd></div>
+    <div><dt>Evidence view</dt><dd>The set of source spans the plan may cite, with offsets into the pinned input.</dd></div>
+    <div><dt>Hard gate</dt><dd>A check that emits a typed stop on failure. Soft gates only record a warning.</dd></div>
+    <div><dt>Typed stop</dt><dd>A terminal result that names the blocking reason. It carries no partial plan.</dd></div>
+    <div><dt>Bounded repair</dt><dd>A return from stage 3 to stage 2. Maximum two passes, then a typed stop.</dd></div>
+  </dl>
+</div></section>
+
+<section id="architecture"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Architecture</div><h2>End-to-end system contract</h2></div><p>Two views of the same system: the stage flow with its gate, and the terminal states every run ends in.</p></div>
+  <figure class="architecture-diagram">
+    <div class="diagram-bar"><h3>Four-stage architecture</h3><a href="../../../diagram-creator/examples/generated/four-stage-architecture.drawio">Open editable diagram</a></div>
+    <div class="diagram-canvas"><svg role="img" aria-label="Four-stage architecture. A pinned input passes through scope, evidence, story, and fit stages into an all-rules pass gate. The gate emits a verified plan or a typed stop. A dashed bounded-repair loop returns from fit to story." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1540 640" role="img" aria-labelledby="diagram-title-four-stage-architecture diagram-desc-four-stage-architecture" font-family="Helvetica,Arial,sans-serif">
+<title id="diagram-title-four-stage-architecture">Episode-to-chapters architecture</title>
+<desc id="diagram-desc-four-stage-architecture">One pinned episode enters the system. One verified plan or one typed stop result leaves the system.</desc>
+<defs><marker id="arrow-047857-four-stage-architecture" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#047857"/></marker><marker id="arrow-64748b-four-stage-architecture" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#64748b"/></marker><marker id="arrow-6d28d9-four-stage-architecture" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#6d28d9"/></marker><marker id="arrow-b91c1c-four-stage-architecture" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#b91c1c"/></marker></defs>
+<rect width="1540" height="640" fill="#ffffff"/>
+<text x="40" y="46" font-size="28" font-weight="700" fill="#121a2a">Episode-to-chapters architecture</text>
+<text x="40" y="74" font-size="14" fill="#556176">One pinned episode enters the system. One verified plan or one typed stop result leaves the system.</text>
+<polyline id="e1-four-stage-architecture" points="230,225.0 280,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#arrow-64748b-four-stage-architecture)"/>
+<polyline id="e2-four-stage-architecture" points="470,225.0 520,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#arrow-64748b-four-stage-architecture)"/>
+<polyline id="e3-four-stage-architecture" points="710,225.0 760,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#arrow-64748b-four-stage-architecture)"/>
+<polyline id="e4-four-stage-architecture" points="950,225.0 1000,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#arrow-64748b-four-stage-architecture)"/>
+<polyline id="e5-four-stage-architecture" points="1190,225.0 1240,225.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#arrow-64748b-four-stage-architecture)"/>
+<polyline id="e6-four-stage-architecture" points="1330.0,285 1330,360 1260,360 1195,360 1195.0,450" fill="none" stroke="#047857" stroke-width="1.8" marker-end="url(#arrow-047857-four-stage-architecture)"/>
+<rect x="1212" y="341" width="96" height="22" rx="4" fill="#ffffff"/>
+<text x="1260" y="356" text-anchor="middle" font-size="12" font-weight="700" fill="#047857">yes</text>
+<polyline id="e7-four-stage-architecture" points="1420,225.0 1460,225 1460,340 1460,450 1395,450 1395.0,450" fill="none" stroke="#b91c1c" stroke-width="1.8" marker-end="url(#arrow-b91c1c-four-stage-architecture)"/>
+<rect x="1412" y="431" width="96" height="22" rx="4" fill="#ffffff"/>
+<text x="1460" y="446" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">no</text>
+<polyline id="e8-four-stage-architecture" points="1095.0,280 1095,350 975,350 855,350 855.0,280" fill="none" stroke="#6d28d9" stroke-width="1.8" marker-end="url(#arrow-6d28d9-four-stage-architecture)" stroke-dasharray="7 5"/>
+<rect x="927" y="331" width="96" height="22" rx="4" fill="#ffffff"/>
+<text x="975" y="346" text-anchor="middle" font-size="12" font-weight="700" fill="#6d28d9">repair (max 2)</text>
+<g id="input-four-stage-architecture">
+<rect x="40" y="170" width="190" height="110" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1.8"/>
+<text x="135.0" y="211.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Pinned input</text>
+<text x="135.0" y="233.5" text-anchor="middle" font-size="13" fill="#556176">Episode and source</text>
+<text x="135.0" y="250.5" text-anchor="middle" font-size="13" fill="#556176">snapshot</text>
+</g>
+<g id="scope-four-stage-architecture">
+<rect x="280" y="170" width="190" height="110" rx="8" fill="#e8f0ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="375.0" y="206.5" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing=".7" fill="#2563eb">STAGE 0</text>
+<text x="375.0" y="227.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Scope request</text>
+<text x="375.0" y="249.5" text-anchor="middle" font-size="13" fill="#556176">Compile policy and budgets</text>
+</g>
+<g id="evidence-four-stage-architecture">
+<rect x="520" y="170" width="190" height="110" rx="8" fill="#fff0dd" stroke="#ea580c" stroke-width="1.8"/>
+<text x="615.0" y="206.5" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing=".7" fill="#ea580c">STAGE 1</text>
+<text x="615.0" y="227.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Prepare evidence</text>
+<text x="615.0" y="249.5" text-anchor="middle" font-size="13" fill="#556176">Build the cited scene view</text>
+</g>
+<g id="story-four-stage-architecture">
+<rect x="760" y="170" width="190" height="110" rx="8" fill="#f0edff" stroke="#6d28d9" stroke-width="1.8"/>
+<text x="855.0" y="197.5" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing=".7" fill="#6d28d9">STAGE 2</text>
+<text x="855.0" y="218.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Build story map</text>
+<text x="855.0" y="240.5" text-anchor="middle" font-size="13" fill="#556176">Prove beats and solve</text>
+<text x="855.0" y="257.5" text-anchor="middle" font-size="13" fill="#556176">chapters</text>
+</g>
+<g id="fit-four-stage-architecture">
+<rect x="1000" y="170" width="190" height="110" rx="8" fill="#dcfce7" stroke="#047857" stroke-width="1.8"/>
+<text x="1095.0" y="197.5" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing=".7" fill="#047857">STAGE 3</text>
+<text x="1095.0" y="218.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Fit and verify</text>
+<text x="1095.0" y="240.5" text-anchor="middle" font-size="13" fill="#556176">Check duration, hooks, and</text>
+<text x="1095.0" y="257.5" text-anchor="middle" font-size="13" fill="#556176">closure</text>
+</g>
+<g id="gate-four-stage-architecture">
+<rect x="1240" y="165" width="180" height="120" rx="8" fill="#fef3c7" stroke="#a16207" stroke-width="1.8"/>
+<text x="1330.0" y="232.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">All rules pass?</text>
+</g>
+<g id="success-four-stage-architecture">
+<rect x="1100" y="450" width="190" height="110" rx="8" fill="#dcfce7" stroke="#047857" stroke-width="1.8"/>
+<text x="1195.0" y="500.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Verified plan</text>
+<text x="1195.0" y="522.5" text-anchor="middle" font-size="13" fill="#556176">MicroDramaPlan, fully cited</text>
+</g>
+<g id="stop-four-stage-architecture">
+<rect x="1310" y="450" width="170" height="110" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.8"/>
+<text x="1395.0" y="500.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Typed stop</text>
+<text x="1395.0" y="522.5" text-anchor="middle" font-size="13" fill="#556176">Failure or abstention</text>
+</g>
+</svg>
+</div>
+  </figure>
+  <figure class="architecture-diagram">
+    <div class="diagram-bar"><h3>Plan lifecycle states</h3><a href="../../../diagram-creator/examples/generated/plan-lifecycle-states.drawio">Open editable diagram</a></div>
+    <div class="diagram-canvas"><svg role="img" aria-label="Plan lifecycle states. Received, scoped, evidenced, solved, and verified form the main path. Two dashed failure edges emit terminal typed stops: invalid input and unsolvable episode." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 600" role="img" aria-labelledby="diagram-title-plan-lifecycle-states diagram-desc-plan-lifecycle-states" font-family="Helvetica,Arial,sans-serif">
+<title id="diagram-title-plan-lifecycle-states">Plan lifecycle states</title>
+<desc id="diagram-desc-plan-lifecycle-states">Every run ends in exactly one terminal state. A repair never returns to a closed stage.</desc>
+<defs><marker id="arrow-047857-plan-lifecycle-states" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#047857"/></marker><marker id="arrow-64748b-plan-lifecycle-states" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#64748b"/></marker><marker id="arrow-b91c1c-plan-lifecycle-states" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#b91c1c"/></marker></defs>
+<rect width="1300" height="600" fill="#ffffff"/>
+<text x="40" y="46" font-size="28" font-weight="700" fill="#121a2a">Plan lifecycle states</text>
+<text x="40" y="74" font-size="14" fill="#556176">Every run ends in exactly one terminal state. A repair never returns to a closed stage.</text>
+<polyline id="s1-plan-lifecycle-states" points="220,220.0 280,220.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#arrow-64748b-plan-lifecycle-states)"/>
+<polyline id="s2-plan-lifecycle-states" points="460,220.0 520,220.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#arrow-64748b-plan-lifecycle-states)"/>
+<polyline id="s3-plan-lifecycle-states" points="700,220.0 760,220.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#arrow-64748b-plan-lifecycle-states)"/>
+<polyline id="s4-plan-lifecycle-states" points="940,220.0 1000,220.0" fill="none" stroke="#047857" stroke-width="1.8" marker-end="url(#arrow-047857-plan-lifecycle-states)"/>
+<polyline id="s5-plan-lifecycle-states" points="370.0,270 370.0,270 370.0,420 370.0,420" fill="none" stroke="#b91c1c" stroke-width="1.8" marker-end="url(#arrow-b91c1c-plan-lifecycle-states)" stroke-dasharray="7 5"/>
+<rect x="322.0" y="401" width="96" height="22" rx="4" fill="#ffffff"/>
+<text x="370.0" y="416" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">cannot pin</text>
+<polyline id="s6-plan-lifecycle-states" points="850.0,270 850.0,270 850.0,420 850.0,420" fill="none" stroke="#b91c1c" stroke-width="1.8" marker-end="url(#arrow-b91c1c-plan-lifecycle-states)" stroke-dasharray="7 5"/>
+<rect x="802.0" y="401" width="96" height="22" rx="4" fill="#ffffff"/>
+<text x="850.0" y="416" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">repair exhausted</text>
+<g id="received-plan-lifecycle-states">
+<rect x="40" y="170" width="180" height="100" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1.8"/>
+<text x="130.0" y="215.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Received</text>
+<text x="130.0" y="237.5" text-anchor="middle" font-size="13" fill="#556176">Input pinned and hashed</text>
+</g>
+<g id="scoped-plan-lifecycle-states">
+<rect x="280" y="170" width="180" height="100" rx="8" fill="#e8f0ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="370.0" y="206.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Scoped</text>
+<text x="370.0" y="228.5" text-anchor="middle" font-size="13" fill="#556176">Policy compiled, budgets</text>
+<text x="370.0" y="245.5" text-anchor="middle" font-size="13" fill="#556176">set</text>
+</g>
+<g id="evidenced-plan-lifecycle-states">
+<rect x="520" y="170" width="180" height="100" rx="8" fill="#fff0dd" stroke="#ea580c" stroke-width="1.8"/>
+<text x="610.0" y="215.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Evidenced</text>
+<text x="610.0" y="237.5" text-anchor="middle" font-size="13" fill="#556176">Scene view cited</text>
+</g>
+<g id="solved-plan-lifecycle-states">
+<rect x="760" y="170" width="180" height="100" rx="8" fill="#f0edff" stroke="#6d28d9" stroke-width="1.8"/>
+<text x="850.0" y="215.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Solved</text>
+<text x="850.0" y="237.5" text-anchor="middle" font-size="13" fill="#556176">Beats proven, chapters fit</text>
+</g>
+<g id="verified-plan-lifecycle-states">
+<rect x="1000" y="170" width="190" height="100" rx="8" fill="#dcfce7" stroke="#047857" stroke-width="1.8"/>
+<text x="1095.0" y="215.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Verified</text>
+<text x="1095.0" y="237.5" text-anchor="middle" font-size="13" fill="#556176">All hard gates passed</text>
+</g>
+<g id="invalid-plan-lifecycle-states">
+<rect x="280" y="420" width="180" height="100" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.8"/>
+<text x="370.0" y="465.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Invalid input</text>
+<text x="370.0" y="487.5" text-anchor="middle" font-size="13" fill="#556176">Typed stop, not retryable</text>
+</g>
+<g id="unsolved-plan-lifecycle-states">
+<rect x="760" y="420" width="180" height="100" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.8"/>
+<text x="850.0" y="456.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Unsolvable episode</text>
+<text x="850.0" y="478.5" text-anchor="middle" font-size="13" fill="#556176">Typed stop after bounded</text>
+<text x="850.0" y="495.5" text-anchor="middle" font-size="13" fill="#556176">repair</text>
+</g>
+</svg>
+</div>
+  </figure>
+</div></section>
+
+<section id="contracts"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Contracts</div><h2>Complete object definitions</h2></div><p>Every required field is shown. No field is hidden behind an ellipsis. Schemas are normative.</p></div>
+  <h3>Run result</h3>
+  <pre class="code-block"><code>runResult:
+  status: VERIFIED_PLAN | TYPED_STOP_INVALID | TYPED_STOP_UNSOLVED
+  inputRef: episode-001
+  outputRef: plan-001
+  hardGates:
+    - name: citations_resolve
+      passed: true
+    - name: budgets_fit
+      passed: true
+    - name: no_orphan_beats
+      passed: true
+  warnings: []
+  provenance:
+    sourceHash: sha256:9f2c…e71a
+    schemaVersion: v2
+    repairPasses: 0</code></pre>
+  <h3>Evidence view</h3>
+  <pre class="code-block"><code>evidenceView:
+  inputRef: episode-001
+  spans:
+    - spanId: span-014
+      startOffset: 5210
+      endOffset: 5890
+      kind: dialogue
+      citation: "ep1 00:52-00:58"
+  coverage: 0.93</code></pre>
+  <div class="callout warn"><strong>Note.</strong> A run result with an empty <code>hardGates</code> list is invalid. The verifier must emit at least one gate record per run.</div>
+</div></section>
+
+<section id="states"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">States</div><h2>Failure and result states</h2></div><p>Every run ends in exactly one state. A typed stop names the blocker; it never carries a partial plan.</p></div>
+  <div class="table-scroll"><table><thead><tr><th>State</th><th>Badge</th><th>Meaning</th><th>Next action</th></tr></thead><tbody>
+    <tr><td>VERIFIED_PLAN</td><td><span class="badge ok">verified</span></td><td>All hard gates passed. The plan is complete and cited.</td><td>Ship to rendering.</td></tr>
+    <tr><td>TYPED_STOP_INVALID</td><td><span class="badge stop">stop</span></td><td>The input could not be pinned or parsed.</td><td>Fix the source, resubmit.</td></tr>
+    <tr><td>TYPED_STOP_UNSOLVED</td><td><span class="badge stop">stop</span></td><td>Bounded repair exhausted. Beats remain unproven or budgets unfit.</td><td>Relax budgets or extend evidence.</td></tr>
+    <tr><td>PARTIAL (rejected)</td><td><span class="badge warn">invalid</span></td><td>Any result that carries a plan with a failed hard gate.</td><td>Never emit. Treat as a verifier bug.</td></tr>
+  </tbody></table></div>
+</div></section>
+
+<section id="tests"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Tests</div><h2>Stage verification gate</h2></div><p>The method stays visible next to the cases. Good and bad output are stated per stage.</p></div>
+  <div class="test-grid">
+    <article><h3>Method</h3><p>Replay one pinned input per stage. Change one field at a time and record the emitted state.</p></article>
+    <article><h3>Good output</h3><p>References resolve, every hard gate record is present, and the state is terminal and typed.</p></article>
+    <article><h3>Bad output</h3><p>A partial plan, a missing gate record, or an untyped failure. All three fail the run.</p></article>
+    <article><h3>Minimum scope</h3><p>One positive case and one typed negative case per stage gate before merge.</p></article>
+  </div>
+  <div class="table-scroll"><table><thead><tr><th>Case</th><th>Input change</th><th>Expected state</th></tr></thead><tbody>
+    <tr><td>T1 · valid episode</td><td>None. Pinned transcript.</td><td>VERIFIED_PLAN, three gate records, no warnings.</td></tr>
+    <tr><td>T2 · unpinnable source</td><td>Corrupt hash.</td><td>TYPED_STOP_INVALID, emitted at stage 0.</td></tr>
+    <tr><td>T3 · missing citation</td><td>Drop one span from the evidence view.</td><td>Repair pass, then TYPED_STOP_UNSOLVED.</td></tr>
+    <tr><td>T4 · budget overflow</td><td>Duration budget below the solved minimum.</td><td>Repair pass, then TYPED_STOP_UNSOLVED.</td></tr>
+    <tr><td>T5 · gate record missing</td><td>Verifier stub omits budgets_fit.</td><td>Invalid runResult. Verifier bug, blocked at review.</td></tr>
+    <tr><td>T6 · third repair pass</td><td>Force a third failure after two passes.</td><td>TYPED_STOP_UNSOLVED. The loop must not run again.</td></tr>
+  </tbody></table></div>
+</div></section>
+
+<section id="example"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Example</div><h2>One run, end to end</h2></div><p>A worked example pins the abstract contracts to concrete values.</p></div>
+  <p>Input <code>episode-001</code> pins at <code>sha256:9f2c…e71a</code>. Stage 1 builds an evidence view with 41 spans and 0.93 coverage. Stage 2 proves 12 beats and solves 6 chapters in one pass. Stage 3 passes all three hard gates.</p>
+  <pre class="code-block"><code>runResult:
+  status: VERIFIED_PLAN
+  inputRef: episode-001
+  outputRef: plan-001
+  hardGates:
+    - {name: citations_resolve, passed: true}
+    - {name: budgets_fit, passed: true}
+    - {name: no_orphan_beats, passed: true}
+  warnings: []
+  provenance:
+    sourceHash: sha256:9f2c…e71a
+    schemaVersion: v2
+    repairPasses: 0</code></pre>
+  <div class="table-scroll"><table><thead><tr><th>Chapter</th><th>Duration</th><th>Beats</th><th>Citations</th></tr></thead><tbody>
+    <tr><td>1 · Arrival</td><td>04:12</td><td>3</td><td>span-001 … span-009</td></tr>
+    <tr><td>2 · The deal</td><td>06:48</td><td>2</td><td>span-010 … span-017</td></tr>
+    <tr><td>3 · Turn</td><td>05:31</td><td>4</td><td>span-018 … span-028</td></tr>
+  </tbody></table></div>
+</div></section>
+
+<section class="finish" id="done"><div class="wrap">
+  <div class="head"><div><div class="eyebrow">Done</div><h2>Plan completion gate</h2></div><p>This plan is complete only when every line below holds in the running system.</p></div>
+  <ul class="index-links">
+    <li>All six test cases pass in CI.</li>
+    <li>Diagrams in this file match the code at HEAD.</li>
+    <li>No partial plan has ever been emitted.</li>
+    <li>The repair loop cannot exceed two passes.</li>
+    <li>Every citation resolves against the pinned hash.</li>
+    <li>This file opens standalone from disk and prints without the nav bar.</li>
+  </ul>
+</div></section>
+
+</main>
+<script>(() => {
+  const links = [...document.querySelectorAll('.stage-nav a[href^="#"]')];
+  const targets = links.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+  if ('IntersectionObserver' in window && targets.length) {
+    const observer = new IntersectionObserver(entries => {
+      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      links.forEach(link => link.removeAttribute('aria-current'));
+      const active = links.find(link => link.getAttribute('href') === `#${visible.target.id}`);
+      if (active) active.setAttribute('aria-current', 'location');
+    }, {rootMargin: '-25% 0px -60% 0px', threshold: [0.01, 0.25, 0.5]});
+    targets.forEach(target => observer.observe(target));
+  }
+})();
+
+</script>
+</body>
+</html>
+

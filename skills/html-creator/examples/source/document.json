@@ -1,0 +1,16 @@
+{
+  "lang": "en",
+  "title": "Standalone architecture document",
+  "description": "Responsive standalone technical document template with embedded architecture diagrams and test cases.",
+  "mark": "V1",
+  "brand": "Architecture brief",
+  "documentKind": "Standalone technical document",
+  "nav": [
+    {"label": "Overview", "href": "#overview"},
+    {"label": "Architecture", "href": "#architecture"},
+    {"label": "Contracts", "href": "#contracts"},
+    {"label": "Tests", "href": "#tests"},
+    {"label": "Done", "href": "#done"}
+  ]
+}
+

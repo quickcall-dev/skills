@@ -1,0 +1,17 @@
+{
+  "lang": "en",
+  "title": "Architecture plan AP-7: Episode-to-chapters planning service",
+  "description": "Standalone architecture plan with embedded editable diagrams, complete object contracts, failure states, test gates, and a worked example.",
+  "mark": "AP-7",
+  "brand": "Planning service",
+  "documentKind": "Standalone architecture plan",
+  "nav": [
+    {"label": "Overview", "href": "#overview"},
+    {"label": "Architecture", "href": "#architecture"},
+    {"label": "Contracts", "href": "#contracts"},
+    {"label": "States", "href": "#states"},
+    {"label": "Tests", "href": "#tests"},
+    {"label": "Example", "href": "#example"},
+    {"label": "Done", "href": "#done"}
+  ]
+}

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 600" role="img" aria-labelledby="plan-lifecycle-states-title plan-lifecycle-states-desc" font-family="Helvetica,Arial,sans-serif">
+<title id="plan-lifecycle-states-title">Plan lifecycle states</title>
+<desc id="plan-lifecycle-states-desc">Every run ends in exactly one terminal state. A repair never returns to a closed stage.</desc>
+<defs><marker id="plan-lifecycle-states-arrow-047857" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#047857"/></marker><marker id="plan-lifecycle-states-arrow-64748b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#64748b"/></marker><marker id="plan-lifecycle-states-arrow-b91c1c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#b91c1c"/></marker></defs>
+<rect width="1300" height="600" fill="#ffffff"/>
+<text x="40" y="46" font-size="28" font-weight="700" fill="#121a2a">Plan lifecycle states</text>
+<text x="40" y="74" font-size="14" fill="#556176">Every run ends in exactly one terminal state. A repair never returns to a closed stage.</text>
+<polyline id="s1" points="220.0,220.0 280.0,220.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#plan-lifecycle-states-arrow-64748b)"/>
+<polyline id="s2" points="460.0,220.0 520.0,220.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#plan-lifecycle-states-arrow-64748b)"/>
+<polyline id="s3" points="700.0,220.0 760.0,220.0" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#plan-lifecycle-states-arrow-64748b)"/>
+<polyline id="s4" points="940.0,220.0 1000.0,220.0" fill="none" stroke="#047857" stroke-width="1.8" marker-end="url(#plan-lifecycle-states-arrow-047857)"/>
+<polyline id="s5" points="370.0,270.0 370.0,420.0" fill="none" stroke="#b91c1c" stroke-width="1.8" marker-end="url(#plan-lifecycle-states-arrow-b91c1c)" stroke-dasharray="7 5"/>
+<polyline id="s6" points="850.0,270.0 850.0,420.0" fill="none" stroke="#b91c1c" stroke-width="1.8" marker-end="url(#plan-lifecycle-states-arrow-b91c1c)" stroke-dasharray="7 5"/>
+<g id="received">
+<rect x="40" y="170" width="180" height="100" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1.8"/>
+<text x="130.0" y="215.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Received</text>
+<text x="130.0" y="237.5" text-anchor="middle" font-size="13" fill="#556176">Input pinned and hashed</text>
+</g>
+<g id="scoped">
+<rect x="280" y="170" width="180" height="100" rx="8" fill="#e8f0ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="370.0" y="206.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Scoped</text>
+<text x="370.0" y="228.5" text-anchor="middle" font-size="13" fill="#556176">Policy compiled, budgets</text>
+<text x="370.0" y="245.5" text-anchor="middle" font-size="13" fill="#556176">set</text>
+</g>
+<g id="evidenced">
+<rect x="520" y="170" width="180" height="100" rx="8" fill="#fff0dd" stroke="#ea580c" stroke-width="1.8"/>
+<text x="610.0" y="215.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Evidenced</text>
+<text x="610.0" y="237.5" text-anchor="middle" font-size="13" fill="#556176">Scene view cited</text>
+</g>
+<g id="solved">
+<rect x="760" y="170" width="180" height="100" rx="8" fill="#f0edff" stroke="#6d28d9" stroke-width="1.8"/>
+<text x="850.0" y="215.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Solved</text>
+<text x="850.0" y="237.5" text-anchor="middle" font-size="13" fill="#556176">Beats proven, chapters fit</text>
+</g>
+<g id="verified">
+<rect x="1000" y="170" width="190" height="100" rx="8" fill="#dcfce7" stroke="#047857" stroke-width="1.8"/>
+<text x="1095.0" y="215.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Verified</text>
+<text x="1095.0" y="237.5" text-anchor="middle" font-size="13" fill="#556176">All hard gates passed</text>
+</g>
+<g id="invalid">
+<rect x="280" y="420" width="180" height="100" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.8"/>
+<text x="370.0" y="465.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Invalid input</text>
+<text x="370.0" y="487.5" text-anchor="middle" font-size="13" fill="#556176">Typed stop, not retryable</text>
+</g>
+<g id="unsolved">
+<rect x="760" y="420" width="180" height="100" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.8"/>
+<text x="850.0" y="456.5" text-anchor="middle" font-size="16" font-weight="700" fill="#121a2a">Unsolvable episode</text>
+<text x="850.0" y="478.5" text-anchor="middle" font-size="13" fill="#556176">Typed stop after bounded</text>
+<text x="850.0" y="495.5" text-anchor="middle" font-size="13" fill="#556176">repair</text>
+</g>
+<rect x="333.9" y="326.0" width="72.2" height="16" rx="3" fill="#ffffff"/>
+<text x="370.0" y="339.0" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">cannot pin</text>
+<rect x="795.9" y="326.0" width="108.2" height="16" rx="3" fill="#ffffff"/>
+<text x="850.0" y="339.0" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">repair exhausted</text>
+</svg>

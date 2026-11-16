@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" modified="2026-11-16T00:00:00.000Z" agent="diagram-creator" version="1.0">
+  <diagram id="page-1" name="Architecture">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="received" value="&lt;b&gt;Received&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Input pinned and hashed&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#475569;fillColor=#f1f5f9;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="170" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="scoped" value="&lt;b&gt;Scoped&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Policy compiled, budgets set&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#2563eb;fillColor=#e8f0ff;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="280" y="170" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="evidenced" value="&lt;b&gt;Evidenced&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Scene view cited&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#ea580c;fillColor=#fff0dd;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="520" y="170" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="solved" value="&lt;b&gt;Solved&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Beats proven, chapters fit&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#6d28d9;fillColor=#f0edff;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="760" y="170" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="verified" value="&lt;b&gt;Verified&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;All hard gates passed&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#047857;fillColor=#dcfce7;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="170" width="190" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="invalid" value="&lt;b&gt;Invalid input&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Typed stop, not retryable&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#b91c1c;fillColor=#fee2e2;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="280" y="420" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="unsolved" value="&lt;b&gt;Unsolvable episode&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#556176&quot;&gt;Typed stop after bounded repair&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;strokeWidth=2;strokeColor=#b91c1c;fillColor=#fee2e2;fontColor=#121a2a;fontSize=14;align=center;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="760" y="420" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#64748b;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1" source="received" target="scoped">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#64748b;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1" source="scoped" target="evidenced">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#64748b;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1" source="evidenced" target="solved">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#047857;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1" source="solved" target="verified">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" value="cannot pin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b91c1c;dashed=1;endArrow=block;endFill=1;" edge="1" parent="1" source="scoped" target="invalid">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" value="repair exhausted" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b91c1c;dashed=1;endArrow=block;endFill=1;" edge="1" parent="1" source="solved" target="unsolved">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

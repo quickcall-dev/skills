@@ -1,0 +1,181 @@
+{
+ "name": "four-stage-architecture",
+ "title": "Episode-to-chapters architecture",
+ "subtitle": "One pinned episode enters the system. One verified plan or one typed stop result leaves the system.",
+ "width": 1540,
+ "height": 640,
+ "nodes": [
+  {
+   "id": "input",
+   "x": 40,
+   "y": 170,
+   "width": 190,
+   "height": 110,
+   "title": "Pinned input",
+   "body": "Episode and source snapshot",
+   "role": "input"
+  },
+  {
+   "id": "scope",
+   "x": 290,
+   "y": 170,
+   "width": 190,
+   "height": 110,
+   "title": "Scope request",
+   "body": "Compile policy and budgets",
+   "role": "stage0",
+   "tag": "STAGE 0"
+  },
+  {
+   "id": "evidence",
+   "x": 540,
+   "y": 170,
+   "width": 190,
+   "height": 110,
+   "title": "Prepare evidence",
+   "body": "Build the cited scene view",
+   "role": "stage1",
+   "tag": "STAGE 1"
+  },
+  {
+   "id": "story",
+   "x": 790,
+   "y": 170,
+   "width": 190,
+   "height": 110,
+   "title": "Build story map",
+   "body": "Prove beats and solve chapters",
+   "role": "stage2",
+   "tag": "STAGE 2"
+  },
+  {
+   "id": "fit",
+   "x": 1040,
+   "y": 170,
+   "width": 190,
+   "height": 110,
+   "title": "Fit and verify",
+   "body": "Check duration, hooks, and closure",
+   "role": "stage3",
+   "tag": "STAGE 3"
+  },
+  {
+   "id": "gate",
+   "x": 1290,
+   "y": 165,
+   "width": 180,
+   "height": 120,
+   "title": "All rules pass?",
+   "role": "gate"
+  },
+  {
+   "id": "success",
+   "x": 1080,
+   "y": 450,
+   "width": 190,
+   "height": 110,
+   "title": "Verified plan",
+   "body": "MicroDramaPlan, fully cited",
+   "role": "success"
+  },
+  {
+   "id": "stop",
+   "x": 1330,
+   "y": 450,
+   "width": 170,
+   "height": 110,
+   "title": "Typed stop",
+   "body": "Failure or abstention",
+   "role": "failure"
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "input",
+   "to": "scope"
+  },
+  {
+   "id": "e2",
+   "from": "scope",
+   "to": "evidence"
+  },
+  {
+   "id": "e3",
+   "from": "evidence",
+   "to": "story"
+  },
+  {
+   "id": "e4",
+   "from": "story",
+   "to": "fit"
+  },
+  {
+   "id": "e5",
+   "from": "fit",
+   "to": "gate"
+  },
+  {
+   "id": "e6",
+   "from": "gate",
+   "to": "success",
+   "fromPort": "bottom",
+   "toPort": "top",
+   "points": [
+    [
+     1380,
+     360
+    ],
+    [
+     1175,
+     360
+    ]
+   ],
+   "label": "yes",
+   "colorRole": "success"
+  },
+  {
+   "id": "e7",
+   "from": "gate",
+   "to": "stop",
+   "fromPort": "right",
+   "toPort": "top",
+   "points": [
+    [
+     1520,
+     225
+    ],
+    [
+     1520,
+     400
+    ],
+    [
+     1415,
+     400
+    ]
+   ],
+   "label": "no",
+   "colorRole": "failure"
+  },
+  {
+   "id": "e8",
+   "from": "fit",
+   "to": "story",
+   "fromPort": "bottom",
+   "toPort": "bottom",
+   "points": [
+    [
+     1135,
+     350
+    ],
+    [
+     885,
+     350
+    ]
+   ],
+   "label": "repair (max 2)",
+   "colorRole": "stage2",
+   "dashed": true
+  }
+ ]
+}
